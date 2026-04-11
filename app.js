@@ -729,6 +729,7 @@ function goTo(screenName, dir = 'right') {
   if (screenName === 'today')   renderToday();
   if (screenName === 'workout') renderWorkout();
   if (screenName === 'progress') renderProgress();
+  if (screenName === 'photos')  renderPhotosGallery();
   if (screenName === 'learn')   renderLearnCards();
   if (screenName === 'ml')      renderML();
 }
@@ -2058,6 +2059,165 @@ function toggleGoal(el, goal) {
   el.classList.toggle('selected');
   if (!state.goals.includes(goal)) state.goals.push(goal);
   else state.goals = state.goals.filter(g => g !== goal);
+}
+
+// ═══════════════════════════════════════════
+// PROGRESS PHOTOS
+// ═══════════════════════════════════════════
+let _pendingPhotos = []; // base64 strings waiting to be saved
+
+function getProgressPhotos() {
+  try {
+    return JSON.parse(localStorage.getItem('bloomProgressPhotos') || '[]');
+  } catch (e) { return []; }
+}
+
+function saveProgressPhotosData(photos) {
+  localStorage.setItem('bloomProgressPhotos', JSON.stringify(photos));
+}
+
+// Wire up file input
+document.addEventListener('DOMContentLoaded', () => {
+  const fileInput = document.getElementById('photo-file-input');
+  if (fileInput) {
+    fileInput.addEventListener('change', handlePhotoFiles);
+  }
+});
+
+function handlePhotoFiles(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  _pendingPhotos = [];
+  const strip = document.getElementById('photos-preview-strip');
+  strip.innerHTML = '';
+
+  let loaded = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      _pendingPhotos.push(ev.target.result);
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.className = 'photos-preview-thumb';
+      strip.appendChild(img);
+      loaded++;
+      if (loaded === files.length) {
+        document.getElementById('photos-form').style.display = 'block';
+        document.getElementById('photo-date-input').value = new Date().toISOString().split('T')[0];
+        document.getElementById('photo-caption-input').value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  // Reset input so same file can be re-selected
+  e.target.value = '';
+}
+
+function cancelPhotoUpload() {
+  _pendingPhotos = [];
+  document.getElementById('photos-form').style.display = 'none';
+  document.getElementById('photos-preview-strip').innerHTML = '';
+}
+
+function saveProgressPhotos() {
+  if (!_pendingPhotos.length) return;
+  const date = document.getElementById('photo-date-input').value || new Date().toISOString().split('T')[0];
+  const caption = document.getElementById('photo-caption-input').value.trim();
+  const photos = getProgressPhotos();
+
+  _pendingPhotos.forEach(dataUrl => {
+    photos.push({
+      id: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      src: dataUrl,
+      date: date,
+      caption: caption,
+      createdAt: Date.now()
+    });
+  });
+
+  try {
+    saveProgressPhotosData(photos);
+  } catch (e) {
+    // localStorage quota exceeded
+    showToast('⚠️ Storage full — try smaller photos');
+    return;
+  }
+
+  _pendingPhotos = [];
+  document.getElementById('photos-form').style.display = 'none';
+  document.getElementById('photos-preview-strip').innerHTML = '';
+  showToast('📸 Photos saved!');
+  renderPhotosGallery();
+}
+
+function deleteProgressPhoto(id) {
+  const photos = getProgressPhotos().filter(p => p.id !== id);
+  saveProgressPhotosData(photos);
+  showToast('🗑️ Photo removed');
+  renderPhotosGallery();
+}
+
+function renderPhotosGallery() {
+  const photos = getProgressPhotos();
+  const gallery = document.getElementById('photos-gallery');
+  const empty = document.getElementById('photos-empty');
+  gallery.innerHTML = '';
+
+  if (!photos.length) {
+    empty.style.display = 'block';
+    gallery.style.display = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  gallery.style.display = 'grid';
+
+  // Sort oldest first (progress view)
+  const sorted = [...photos].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  sorted.forEach((photo, i) => {
+    const card = document.createElement('div');
+    card.className = 'photo-card';
+    card.style.animationDelay = (i * 0.06) + 's';
+    const displayDate = formatPhotoDate(photo.date);
+    card.innerHTML = `
+      <img class="photo-card-img" src="${photo.src}" alt="Progress photo" onclick="openLightbox('${photo.id}')">
+      <div class="photo-card-info">
+        <div class="photo-card-date">${displayDate}</div>
+        ${photo.caption ? `<div class="photo-card-caption">${escapeHtml(photo.caption)}</div>` : ''}
+      </div>
+      <button class="photo-card-delete" onclick="deleteProgressPhoto('${photo.id}')">🗑️ Delete</button>
+    `;
+    gallery.appendChild(card);
+  });
+}
+
+function formatPhotoDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function openLightbox(photoId) {
+  const photos = getProgressPhotos();
+  const photo = photos.find(p => p.id === photoId);
+  if (!photo) return;
+  document.getElementById('lightbox-img').src = photo.src;
+  const caption = photo.caption
+    ? `${formatPhotoDate(photo.date)} · ${escapeHtml(photo.caption)}`
+    : formatPhotoDate(photo.date);
+  document.getElementById('lightbox-caption').textContent = caption;
+  document.getElementById('photo-lightbox').classList.add('open');
+}
+
+function closeLightbox(e) {
+  if (e && e.target !== e.currentTarget && !e.target.classList.contains('lightbox-close')) return;
+  document.getElementById('photo-lightbox').classList.remove('open');
 }
 
 // ═══════════════════════════════════════════
