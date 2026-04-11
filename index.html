@@ -571,6 +571,58 @@
     <div class="cc-title">This cycle's celebration</div>
     <div class="cc-text" id="celebration-text">"Complete your first check-in to unlock your personal celebration card! 🌸"</div>
   </div>
+
+  <!-- Progress Photos link -->
+  <div style="margin:0 20px 20px">
+    <button class="btn-soft" onclick="goTo('photos')" style="display:flex;align-items:center;justify-content:center;gap:8px">
+      <span>📸</span> View Progress Photos
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════ PROGRESS PHOTOS ══════════════ -->
+<div class="screen" id="screen-photos">
+  <div class="photos-header">
+    <div class="section-header">Progress <em>photos.</em></div>
+    <div style="font-size:14px;color:var(--mid);margin-top:6px">See how far you've come 📸</div>
+  </div>
+
+  <!-- Upload area -->
+  <div class="photos-upload-area" id="photos-upload-area">
+    <input type="file" id="photo-file-input" accept="image/*" multiple hidden>
+    <button class="btn-primary photos-upload-btn" id="photos-upload-btn" onclick="document.getElementById('photo-file-input').click()">
+      <span>📷</span> Upload Photos
+    </button>
+    <div class="photos-upload-hint">Tap to select one or more photos from your device</div>
+  </div>
+
+  <!-- Upload form (hidden until photos selected) -->
+  <div class="photos-form card" id="photos-form" style="display:none">
+    <div class="photos-form-title">Add details</div>
+    <div class="photos-preview-strip" id="photos-preview-strip"></div>
+    <label class="photos-label">Date</label>
+    <input type="date" class="photos-input" id="photo-date-input">
+    <label class="photos-label">Caption <span style="color:var(--light)">(optional)</span></label>
+    <input type="text" class="photos-input" id="photo-caption-input" placeholder="e.g. Feeling stronger 💪" maxlength="100">
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-soft" onclick="cancelPhotoUpload()" style="flex:1">Cancel</button>
+      <button class="btn-primary" onclick="saveProgressPhotos()" style="flex:1">Save</button>
+    </div>
+  </div>
+
+  <!-- Gallery -->
+  <div class="photos-gallery" id="photos-gallery"></div>
+
+  <!-- Empty state -->
+  <div class="photos-empty" id="photos-empty" style="display:none">
+    <div class="photos-empty-icon">🌱</div>
+    <div class="photos-empty-title">No photos yet</div>
+    <div class="photos-empty-text">Upload your first progress photo to start tracking your journey!</div>
+  </div>
+
+  <div style="padding:16px 20px 24px">
+    <button class="btn-soft" onclick="goTo('progress','left')">← Back to progress</button>
+  </div>
 </div>
 
 <!-- ══════════════ LEARN ══════════════ -->
@@ -837,6 +889,10 @@
       <span class="nav-icon">📈</span>
       <span class="nav-label">Progress</span>
     </button>
+    <button class="nav-btn" id="nav-photos" onclick="goTo('photos')">
+      <span class="nav-icon">📸</span>
+      <span class="nav-label">Photos</span>
+    </button>
     <button class="nav-btn" id="nav-ml" onclick="goTo('ml')">
       <span class="nav-icon">🧠</span>
       <span class="nav-label">Engine</span>
@@ -935,6 +991,13 @@
 </div>
 
 <!-- ACCOUNT SHEET -->
+
+<!-- PHOTO LIGHTBOX -->
+<div class="photo-lightbox" id="photo-lightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="Progress photo">
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
 
 <div class="account-sheet" id="account-sheet" onclick="closeAccount(event)">
   <div class="account-card" id="account-card-inner">
