@@ -41,6 +41,7 @@ APP LAYOUT
 #app-shell {
 width: 100%;
 max-width: 480px;
+height: 100dvh;
 min-height: 100vh;
 background: #FFFFFF;
 border-radius: 0;
@@ -215,7 +216,7 @@ padding-bottom: 0;
 }
 
 .ob-blob { display: none; }
-.ob-step { padding: 20px 28px 100px; flex: 1; animation: fadeUp .4s ease; overflow-y: auto; }
+.ob-step { padding: 20px 28px 100px; flex: 1; animation: fadeUp .4s ease both; overflow-y: auto; }
 .ob-step-hidden { display: none !important; }
 
 .ob-progress { height: 4px; background: rgba(202,168,186,.25); border-radius: 100px; margin-bottom: 28px; overflow: hidden; }
