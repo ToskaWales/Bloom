@@ -71,7 +71,7 @@ display: none;
 flex-direction: column;
 scrollbar-width: none;
 -webkit-overflow-scrolling: touch;
-padding-bottom: 64px;
+padding-bottom: 80px;
 }
 .screen::-webkit-scrollbar { display: none; }
 .screen.active { display: flex; }
