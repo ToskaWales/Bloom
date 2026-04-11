@@ -891,7 +891,7 @@ animation: fadeUp .35s ease;
   <div id="screen-container">
 
 <!-- ══════════════ AUTH ══════════════ -->
-<div class="screen active" id="screen-auth">
+<div class="screen" id="screen-auth">
   <div class="auth-bg-blob" style="width:300px;height:300px;background:var(--rose);top:-120px;right:-80px"></div>
   <div class="auth-bg-blob" style="width:220px;height:220px;background:var(--lilac);bottom:60px;left:-90px"></div>
 
@@ -938,7 +938,7 @@ animation: fadeUp .35s ease;
 </div>
 
 <!-- ══════════════ ONBOARDING ══════════════ -->
-<div class="screen" id="screen-onboarding">
+<div class="screen active" id="screen-onboarding">
   <div class="ob-blob" style="width:280px;height:280px;background:var(--rose);top:-100px;right:-80px;opacity:.12"></div>
   <div class="ob-blob" style="width:200px;height:200px;background:var(--lilac);bottom:80px;left:-80px;opacity:.1"></div>
 
@@ -2608,9 +2608,19 @@ function finishOnboarding() {
   invalidateML();
   saveState();
 
+  onboardingCompleted = true;
+  localStorage.setItem('bloom_onboarding_done', '1');
+
   document.getElementById('screen-onboarding').classList.remove('active');
-  document.getElementById('bottom-nav').style.display = 'flex';
-  goTo('today');
+
+  // If Firebase is unavailable (offline mode), skip auth and go straight to the app
+  if (window._firebaseFailed) {
+    document.getElementById('bottom-nav').style.display = 'flex';
+    goTo('today');
+  } else {
+    document.getElementById('bottom-nav').style.display = 'none';
+    document.getElementById('screen-auth').classList.add('active');
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -3479,6 +3489,7 @@ function showToast(msg) {
 // ═══════════════════════════════════════════
 let currentUser = null;
 let lastSyncTime = null;
+let onboardingCompleted = !!localStorage.getItem('bloom_onboarding_done');
 
 // Called by the Firebase module once auth state resolves.
 // The module loads AFTER this main script, so this is always defined first.
@@ -3495,7 +3506,11 @@ window._onAuthStateChanged = async (user) => {
   } else {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('bottom-nav').style.display = 'none';
-    document.getElementById('screen-auth').classList.add('active');
+    if (onboardingCompleted) {
+      document.getElementById('screen-auth').classList.add('active');
+    } else {
+      document.getElementById('screen-onboarding').classList.add('active');
+    }
   }
 };
 
@@ -3932,9 +3947,19 @@ function finishOnboarding() {
   invalidateML();
   saveState();
 
+  onboardingCompleted = true;
+  localStorage.setItem('bloom_onboarding_done', '1');
+
   document.getElementById('screen-onboarding').classList.remove('active');
-  document.getElementById('bottom-nav').style.display = 'flex';
-  goTo('today');
+
+  // If Firebase is unavailable (offline mode), skip auth and go straight to the app
+  if (window._firebaseFailed) {
+    document.getElementById('bottom-nav').style.display = 'flex';
+    goTo('today');
+  } else {
+    document.getElementById('bottom-nav').style.display = 'none';
+    document.getElementById('screen-auth').classList.add('active');
+  }
 }
 
 // Legacy - kept for any remaining references
@@ -3957,9 +3982,14 @@ function init() {
   document.getElementById('bottom-nav').style.display = 'none';
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
 
-  // Show auth screen immediately while Firebase initialises in the background
-  // _onAuthStateChanged will hide it as soon as auth state resolves
-  document.getElementById('screen-auth').classList.add('active');
+  // Show onboarding first; after completion, show auth screen
+  // If user already completed onboarding (returning visitor), show auth directly
+  // _onAuthStateChanged will skip to today if already logged in
+  if (onboardingCompleted) {
+    document.getElementById('screen-auth').classList.add('active');
+  } else {
+    document.getElementById('screen-onboarding').classList.add('active');
+  }
 
   // Fallback: if Firebase module fails to load (network issue, etc.) go offline
   window._onFirebaseFailed = () => {
