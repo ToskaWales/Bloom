@@ -1878,12 +1878,20 @@ function obNext(step) {
     const n = document.getElementById('name-input').value.trim();
     if (n) state.name = n;
   }
-  document.querySelectorAll('.ob-step').forEach(s => s.classList.add('ob-step-hidden'));
+  // Hide all steps and clear any leftover inline animation overrides
+  document.querySelectorAll('.ob-step').forEach(s => {
+    s.classList.add('ob-step-hidden');
+    s.style.animation = '';
+  });
   const el = document.getElementById('ob-step-' + step);
   if (!el) return;
   el.classList.remove('ob-step-hidden');
-  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = 'fadeUp .4s ease';
+  // Force animation restart (transition from display:none resets the keyframe)
+  void el.offsetWidth;
+  // Scroll the step and the screen to the top
   el.scrollTop = 0;
+  const screen = document.getElementById('screen-onboarding');
+  if (screen) screen.scrollTop = 0;
 }
 
 function obValidateName() {
