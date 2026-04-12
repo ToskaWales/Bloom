@@ -1793,6 +1793,50 @@ function exportData() {
   showToast('📥 Data exported!');
 }
 
+function resetOnboarding() {
+  if (!confirm('This will reset your profile settings and cycle data. Your workout history will be kept. Continue?')) return;
+  closeAccount();
+  localStorage.removeItem('bloom_onboarding_done');
+  onboardingCompleted = false;
+  daysUntilNextPeriod = null;
+  obPeriodSymptoms = [];
+  state.name = 'Sofia';
+  state.goals = ['strength'];
+  state.level = 1;
+  state.focusMuscles = [];
+  state.trainingDaysPerWeek = 3;
+  state.sessionDurationMins = 45;
+  state.durationScale = 1;
+  state.phase = null;
+  state.cycle = getDefaultCycle();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('bottom-nav').style.display = 'none';
+  document.getElementById('screen-onboarding').classList.add('active');
+  obNext(1);
+}
+
+function resetAccount() {
+  if (!confirm('This will permanently delete ALL your data including workout history and cycle tracking. This cannot be undone. Are you sure?')) return;
+  closeAccount();
+  localStorage.removeItem('bloom_state');
+  localStorage.removeItem('bloom_onboarding_done');
+  localStorage.removeItem('bloomProgressPhotos');
+  onboardingCompleted = false;
+  daysUntilNextPeriod = null;
+  obPeriodSymptoms = [];
+  Object.assign(state, {
+    name: 'Sofia', goals: ['strength'], level: 1, mood: 3, energy: 6,
+    symptoms: [], workoutsCompleted: 0, streak: 0, listenedToBody: 0,
+    totalMins: 0, moodHistory: [], checkinDone: false, phase: null,
+    cycle: getDefaultCycle(),
+  });
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('bottom-nav').style.display = 'none';
+  document.getElementById('screen-onboarding').classList.add('active');
+  obNext(1);
+  showToast('Account reset. Starting fresh.');
+}
+
 // ── Offline fallback ──
 function offlineInit() {
   window._firebaseCallbackReceived = true; // prevent double-firing timeout
@@ -1869,7 +1913,7 @@ function getDefaultCycle() {
 // ═══════════════════════════════════════════
 // ONBOARDING JS
 // ═══════════════════════════════════════════
-let selectedCycleDay = 2;
+let daysUntilNextPeriod = null;
 let obPeriodSymptoms = [];
 
 // ── Navigation ──
@@ -1992,11 +2036,15 @@ function selectPeriodDays(el, days) {
   state.cycle.phaseLengths = { menstrual: bleed, follicular: fol, ovulatory: ovu, luteal: lut };
 }
 
-// ── Step 9: Last period + symptoms ──
+// ── Step 9: Next period + symptoms ──
+function setNextPeriodDays(val) {
+  const n = parseInt(val);
+  daysUntilNextPeriod = (!isNaN(n) && n >= 1 && n <= 90) ? n : null;
+}
+
 function selectCycleDay(el, daysAgo) {
   document.querySelectorAll('#cycle-opts .cycle-opt').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
-  selectedCycleDay = daysAgo; // null = unknown
 }
 
 function toggleObSymptom(el, sym) {
@@ -2018,9 +2066,10 @@ function finishOnboarding() {
     );
   });
 
-  // Seed cycle model from period date
-  if (selectedCycleDay !== null) {
-    const daysAgo = selectedCycleDay - 1;
+  // Seed cycle model from next period date
+  if (daysUntilNextPeriod !== null) {
+    const cycleLen = state.cycle.cycleLength || 28;
+    const daysAgo = Math.max(0, cycleLen - daysUntilNextPeriod);
     const lastPeriodDate = new Date();
     lastPeriodDate.setDate(lastPeriodDate.getDate() - daysAgo);
     const dateStr = lastPeriodDate.toISOString().split('T')[0];

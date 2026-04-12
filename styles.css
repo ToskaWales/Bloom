@@ -221,6 +221,9 @@ display: none; align-items: flex-end; justify-content: center; max-width: 390px;
 background: #FFFFFF;
 padding-bottom: 0;
 }
+.ob-back-btn { background: none; border: none; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700; color: var(--mid); cursor: pointer; padding: 0 0 12px; display: flex; align-items: center; gap: 5px; }
+.ob-back-btn:active { opacity: .6; }
+.ac-danger .ac-row-text { color: var(--rose-d); }
 
 .ob-blob { display: none; }
 .ob-step { padding: 20px 28px 100px; flex: 1; animation: fadeUp .4s ease both; overflow-y: auto; }
