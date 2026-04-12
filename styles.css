@@ -71,7 +71,12 @@ display: none;
 flex-direction: column;
 scrollbar-width: none;
 -webkit-overflow-scrolling: touch;
-padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+}
+.screen::after {
+content: '';
+display: block;
+min-height: calc(112px + env(safe-area-inset-bottom, 0px));
+flex-shrink: 0;
 }
 .screen::-webkit-scrollbar { display: none; }
 .screen.active { display: flex; }

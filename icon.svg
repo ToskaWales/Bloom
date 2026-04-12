@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="114" fill="#F2A7B4"/>
+
+  <!-- 8 petals -->
+  <ellipse cx="256" cy="152" rx="44" ry="78" fill="white" opacity="0.92"/>
+  <ellipse cx="256" cy="360" rx="44" ry="78" fill="white" opacity="0.92"/>
+  <ellipse cx="152" cy="256" rx="78" ry="44" fill="white" opacity="0.92"/>
+  <ellipse cx="360" cy="256" rx="78" ry="44" fill="white" opacity="0.92"/>
+  <ellipse cx="182" cy="182" rx="44" ry="78" fill="white" opacity="0.85" transform="rotate(-45 182 182)"/>
+  <ellipse cx="330" cy="182" rx="44" ry="78" fill="white" opacity="0.85" transform="rotate(45 330 182)"/>
+  <ellipse cx="182" cy="330" rx="44" ry="78" fill="white" opacity="0.85" transform="rotate(45 182 330)"/>
+  <ellipse cx="330" cy="330" rx="44" ry="78" fill="white" opacity="0.85" transform="rotate(-45 330 330)"/>
+
+  <!-- Centre -->
+  <circle cx="256" cy="256" r="68" fill="#E8849A"/>
+  <circle cx="256" cy="256" r="42" fill="#F9C9D8"/>
+  <circle cx="256" cy="256" r="22" fill="#E8849A"/>
+</svg>
