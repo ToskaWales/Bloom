@@ -1700,6 +1700,7 @@ async function cloudSaveState() {
   try {
     const clean = JSON.parse(JSON.stringify(state)); // strip undefined
     await window._fbSaveState(currentUser.uid, clean);
+    _stateDirty = false;
     lastSyncTime = new Date();
     updateSyncUI();
     saveStateLocal();
@@ -1730,8 +1731,13 @@ async function cloudLoadState() {
 }
 
 let _lastManualSync = 0;
+let _stateDirty = false;
 
 async function manualCloudSync() {
+  if (!_stateDirty) {
+    showToast('Already up to date');
+    return;
+  }
   const now = Date.now();
   if (now - _lastManualSync < 30000) {
     showToast('Synced recently — try again in a moment');
@@ -1740,11 +1746,17 @@ async function manualCloudSync() {
   _lastManualSync = now;
   // Flush any pending debounced save immediately
   if (_cloudSaveTimer) { clearTimeout(_cloudSaveTimer); _cloudSaveTimer = null; }
+  const row = document.getElementById('ac-sync-row');
+  if (row) row.disabled = true;
   const textEl = document.getElementById('ac-sync-text');
   if (textEl) textEl.firstChild.textContent = 'Syncing...';
   await cloudSaveState();
   showToast('☁️ Synced to cloud!');
   updateSyncUI();
+  setTimeout(() => {
+    const r = document.getElementById('ac-sync-row');
+    if (r) r.disabled = false;
+  }, 30000);
 }
 
 function updateSyncUI() {
@@ -1881,6 +1893,7 @@ let _cloudSaveTimer = null;
 
 function saveState() {
   saveStateLocal(); // always write locally right away — no data loss
+  _stateDirty = true;
   // Debounce the Firestore write: collapse rapid saves into one write
   if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
   _cloudSaveTimer = setTimeout(() => {
