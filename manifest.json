@@ -1,0 +1,26 @@
+{
+  "name": "Bloom · Cycle-Aware Training",
+  "short_name": "Bloom",
+  "description": "Cycle-aware fitness training that adapts to your body every day",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FDE8EE",
+  "theme_color": "#E8849A",
+  "categories": ["health", "fitness"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
