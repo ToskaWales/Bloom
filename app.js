@@ -1729,7 +1729,17 @@ async function cloudLoadState() {
   return false;
 }
 
+let _lastManualSync = 0;
+
 async function manualCloudSync() {
+  const now = Date.now();
+  if (now - _lastManualSync < 30000) {
+    showToast('Synced recently — try again in a moment');
+    return;
+  }
+  _lastManualSync = now;
+  // Flush any pending debounced save immediately
+  if (_cloudSaveTimer) { clearTimeout(_cloudSaveTimer); _cloudSaveTimer = null; }
   const textEl = document.getElementById('ac-sync-text');
   if (textEl) textEl.firstChild.textContent = 'Syncing...';
   await cloudSaveState();
@@ -1867,8 +1877,16 @@ function offlineInit() {
 // ═══════════════════════════════════════════
 // PERSISTENCE (localStorage layer)
 // ═══════════════════════════════════════════
+let _cloudSaveTimer = null;
+
 function saveState() {
-  cloudSaveState(); // async — saves to Firestore + localStorage
+  saveStateLocal(); // always write locally right away — no data loss
+  // Debounce the Firestore write: collapse rapid saves into one write
+  if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
+  _cloudSaveTimer = setTimeout(() => {
+    cloudSaveState();
+    _cloudSaveTimer = null;
+  }, 5000);
 }
 
 function saveStateLocal() {
