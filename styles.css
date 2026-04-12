@@ -368,7 +368,7 @@ animation: fadeUp .4s ease .35s both;
 /* ═══════════════════════════════════════════
 CHECK-IN SCREEN
 ═══════════════════════════════════════════ */
-#screen-checkin { background: var(--cream); padding: 28px 24px; }
+#screen-checkin { background: var(--cream); padding: 28px 24px calc(112px + env(safe-area-inset-bottom, 0px)); }
 
 .ci-title { font-family: ‘Playfair Display’, serif; font-size: 28px; margin-bottom: 6px; }
 .ci-title em { font-style: italic; color: var(--rose-d); }
@@ -513,7 +513,7 @@ transition: all .25s;
 /* ═══════════════════════════════════════════
 PROGRESS SCREEN.
 ═══════════════════════════════════════════ */
-#screen-progress { background: var(--cream); padding: 24px; }
+#screen-progress { background: var(--cream); padding: 24px 24px calc(112px + env(safe-area-inset-bottom, 0px)); }
 
 .progress-header { margin-bottom: 24px; }
 .progress-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
@@ -554,7 +554,7 @@ animation: fadeUp .4s ease .2s both;
 /* ═══════════════════════════════════════════
 LEARN SCREEN
 ═══════════════════════════════════════════ */
-#screen-learn { background: var(--cream); padding: 24px; }
+#screen-learn { background: var(--cream); padding: 24px 24px calc(112px + env(safe-area-inset-bottom, 0px)); }
 
 .learn-header { margin-bottom: 24px; }
 .insight-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; margin-bottom: 20px; }
@@ -757,7 +757,7 @@ display: flex; flex-direction: column; align-items: center; flex-shrink: 0; widt
 .ml-step-output { font-size: 11px; font-weight: 700; margin-top: 4px; }
 
 #screen-ml {
-background: #FFFFFF; padding: 0;
+background: #FFFFFF; padding: 0 0 calc(112px + env(safe-area-inset-bottom, 0px));
 }
 .ml-hero {
 background: linear-gradient(160deg, #1E1525 0%, #2A1F35 100%);
