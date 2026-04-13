@@ -223,6 +223,8 @@ padding-bottom: 0;
 }
 .ob-back-btn { background: none; border: none; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700; color: var(--mid); cursor: pointer; padding: 0 0 12px; display: flex; align-items: center; gap: 5px; }
 .ob-back-btn:active { opacity: .6; }
+.ob-already-account { text-align: center; margin-top: 16px; font-size: 13px; color: var(--mid); }
+.ob-login-link { background: none; border: none; font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700; color: var(--rose-d); cursor: pointer; padding: 0; text-decoration: underline; }
 .ac-danger .ac-row-text { color: var(--rose-d); }
 
 .ob-blob { display: none; }
