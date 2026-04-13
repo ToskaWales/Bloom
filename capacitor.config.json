@@ -1,0 +1,15 @@
+{
+  "appId": "com.bloom.app",
+  "appName": "Bloom",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#FDE8EE",
+      "showSpinner": false
+    }
+  }
+}

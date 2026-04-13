@@ -1,0 +1,19 @@
+{
+  "name": "bloom",
+  "version": "1.0.0",
+  "description": "Cycle-aware training companion",
+  "scripts": {
+    "build": "cp index.html app.js styles.css sw.js manifest.json icon.svg www/",
+    "sync": "npm run build && npx cap sync",
+    "open:ios": "npm run sync && npx cap open ios",
+    "open:android": "npm run sync && npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
+  }
+}
