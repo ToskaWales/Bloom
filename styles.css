@@ -658,18 +658,30 @@ animation: fadeUp .4s ease .05s both;
 
 /* ── WEEK STRIP ── */
 .week-strip-wrap { padding: 0 24px 14px; }
-.week-strip-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--light); margin-bottom: 8px; }
+.week-strip-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.week-strip-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--light); }
+.week-autoplan-btn { background: none; border: 1.5px solid var(--rose); border-radius: 100px; font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 700; color: var(--rose-d); padding: 3px 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.week-autoplan-btn:active { opacity: .65; transform: scale(.95); }
 .week-strip { display: flex; gap: 6px; }
+.week-strip-hint { font-size: 10px; color: var(--light); text-align: center; margin-top: 7px; letter-spacing: .3px; }
 .ws-day {
-flex: 1; border-radius: 12px; padding: 8px 4px; text-align: center;
-background: rgba(255,255,255,.7); border: 1.5px solid rgba(202,168,186,.25);
-transition: all .2s; cursor: default;
+  flex: 1; border-radius: 12px; padding: 8px 4px; text-align: center;
+  background: rgba(255,255,255,.7); border: 1.5px solid rgba(202,168,186,.2);
+  transition: transform .12s, opacity .12s, background .2s, border-color .2s;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none;
 }
-.ws-day.today { border-color: var(--rose); background: white; box-shadow: 0 2px 10px rgba(242,167,180,.25); }
-.ws-day.completed { background: var(--sage); border-color: var(--sage-d); }
-.ws-day.rest { background: #FDE8EE; border-color: rgba(242,167,180,.3); }
-.ws-d-label { font-size: 9px; font-weight: 700; color: var(--light); margin-bottom: 4px; }
+.ws-day:active { transform: scale(.91); opacity: .75; }
+.ws-day.today { border-color: var(--rose) !important; background: white !important; box-shadow: 0 2px 12px rgba(242,167,180,.3); }
 .ws-day.today .ws-d-label { color: var(--rose-d); }
+.ws-day.ws-done { background: var(--sage) !important; border-color: var(--sage-d) !important; }
+.ws-day.ws-done .ws-d-label { color: rgba(255,255,255,.7); }
+.ws-day.ws-done .ws-d-icon { color: white; font-weight: 900; }
+.ws-day.ws-done .ws-d-type { color: var(--sage-d); }
+.ws-day.ws-rest { background: rgba(255,255,255,.45); }
+.ws-day.ws-rest .ws-d-icon { opacity: .4; }
+.ws-day.ws-rest .ws-d-type { opacity: .45; }
+.ws-day.ws-missed { opacity: .38; }
+.ws-d-label { font-size: 9px; font-weight: 700; color: var(--light); margin-bottom: 4px; }
 .ws-d-icon { font-size: 13px; display: block; }
 .ws-d-type { font-size: 8px; color: var(--mid); margin-top: 2px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
