@@ -16,6 +16,11 @@ const state = {
   checkinDone: false,
   phase: null,
 
+  // ── WEEK PLANNER ──
+  weekSchedule: null,       // bool[7] Mon–Sun: true = training day
+  weekScheduleWeek: null,   // ISO date of this week's Monday (for auto-reset)
+  weekCompletions: {},      // { 'YYYY-MM-DD': true } workout completed that day
+
   // ── PERSONAL CYCLE MODEL ──
   // Seeded from onboarding, refined by "period started" events + symptom inference
   cycle: {
@@ -745,6 +750,132 @@ function showCheckin() { goTo('checkin'); }
 function goToWorkout() { goTo('workout'); }
 
 // ═══════════════════════════════════════════
+// WEEK PLANNER
+// ═══════════════════════════════════════════
+
+function getWeekMonday() {
+  const d = new Date();
+  const diff = (d.getDay() + 6) % 7; // days since Monday
+  d.setDate(d.getDate() - diff);
+  return d.toISOString().split('T')[0];
+}
+
+function buildDefaultSchedule(phase, n) {
+  // Reduce training days in menstrual phase to protect recovery
+  const effectiveDays = (phase === 'menstrual') ? Math.max(1, n - 1) : n;
+  const clamped = Math.min(5, Math.max(1, effectiveDays));
+  const patterns = {
+    1: [2],             // Wed
+    2: [1, 4],          // Tue, Fri
+    3: [0, 2, 4],       // Mon, Wed, Fri
+    4: [0, 1, 3, 4],    // Mon, Tue, Thu, Fri
+    5: [0, 1, 2, 3, 4], // Mon–Fri
+  };
+  const trainSet = new Set(patterns[clamped]);
+  return Array.from({ length: 7 }, (_, i) => trainSet.has(i));
+}
+
+function getWeekSchedule() {
+  const thisMonday = getWeekMonday();
+  if (state.weekScheduleWeek !== thisMonday || !state.weekSchedule) {
+    state.weekScheduleWeek = thisMonday;
+    state.weekSchedule = buildDefaultSchedule(
+      state.phase || 'follicular',
+      state.trainingDaysPerWeek || 3
+    );
+    saveState();
+  }
+  return state.weekSchedule;
+}
+
+function toggleWeekDay(dayIdx) {
+  const schedule = getWeekSchedule();
+  // Don't allow toggling already-completed days
+  const mondayDate = new Date(getWeekMonday());
+  mondayDate.setDate(mondayDate.getDate() + dayIdx);
+  const dateStr = mondayDate.toISOString().split('T')[0];
+  if ((state.weekCompletions || {})[dateStr]) return;
+
+  schedule[dayIdx] = !schedule[dayIdx];
+  state.weekSchedule = [...schedule];
+  saveState();
+  renderWeekStrip();
+
+  const trainingCount = schedule.filter(Boolean).length;
+  const msg = schedule[dayIdx]
+    ? `Training day added · ${trainingCount} days this week 💪`
+    : `Rest day set · ${trainingCount} training days this week 🍃`;
+  showToast(msg);
+}
+
+function resetWeekSchedule() {
+  state.weekScheduleWeek = getWeekMonday();
+  state.weekSchedule = buildDefaultSchedule(
+    state.phase || 'follicular',
+    state.trainingDaysPerWeek || 3
+  );
+  saveState();
+  renderWeekStrip();
+  showToast('✨ Week rebuilt by Bloom!');
+}
+
+function renderWeekStrip() {
+  const strip = document.getElementById('week-strip');
+  if (!strip) return;
+
+  const schedule = getWeekSchedule();
+  const todayIdx = (new Date().getDay() + 6) % 7;
+  const mondayDate = new Date(getWeekMonday());
+  const completions = state.weekCompletions || {};
+  const currentCycleDay = state.cycleDay || getCycleDay();
+  const cycleLen = state.cycle.cycleLength || 28;
+
+  const phaseColors = { menstrual:'#F2A7B4', follicular:'#C9B8E8', ovulatory:'#F9C9A3', luteal:'#B8D4C0' };
+  const phaseIcons  = { menstrual:'🌹', follicular:'🌷', ovulatory:'⚡️', luteal:'🍂' };
+  const phaseTypes  = { menstrual:'Gentle', follicular:'Build', ovulatory:'Peak', luteal:'Steady' };
+  const dayNames    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  strip.innerHTML = dayNames.map((d, i) => {
+    const dayDate = new Date(mondayDate);
+    dayDate.setDate(mondayDate.getDate() + i);
+    const dateStr = dayDate.toISOString().split('T')[0];
+
+    const isToday     = i === todayIdx;
+    const isPast      = i < todayIdx;
+    const isCompleted = !!(completions[dateStr]);
+    const isTraining  = schedule[i];
+    const isMissed    = isPast && isTraining && !isCompleted;
+
+    // Approximate cycle phase for this day
+    const offsetDay = currentCycleDay + (i - todayIdx);
+    const wrappedDay = ((offsetDay - 1 + cycleLen * 10) % cycleLen) + 1;
+    const dayPhase = getPhaseFromDay(wrappedDay) || state.phase || 'follicular';
+
+    let classes = 'ws-day';
+    if (isToday)      classes += ' today';
+    if (isCompleted)  classes += ' ws-done';
+    else if (isTraining) classes += ' ws-training';
+    else              classes += ' ws-rest';
+    if (isMissed)     classes += ' ws-missed';
+
+    let icon, typeLabel, inlineStyle = '';
+    if (isCompleted) {
+      icon = '✓'; typeLabel = 'Done!';
+    } else if (!isTraining) {
+      icon = '💤'; typeLabel = 'Rest';
+    } else {
+      icon = phaseIcons[dayPhase] || '🌸';
+      typeLabel = phaseTypes[dayPhase] || 'Train';
+      if (!isPast) {
+        inlineStyle = ` style="border-color:${phaseColors[dayPhase]}80;background:${phaseColors[dayPhase]}20"`;
+      }
+    }
+
+    return `<div class="${classes}" onclick="toggleWeekDay(${i})"${inlineStyle}><div class="ws-d-label">${d}</div><span class="ws-d-icon">${icon}</span><div class="ws-d-type">${typeLabel}</div></div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
 // TODAY SCREEN
 // ═══════════════════════════════════════════
 function renderToday() {
@@ -792,20 +923,7 @@ function renderToday() {
   document.getElementById('phase-chips').innerHTML = phase.chips.map(c => `<span class="phase-chip">${c}</span>`).join('');
 
   // week strip
-  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const todayIdx = (new Date().getDay() + 6) % 7; // Mon=0
-  const weekPhases = { menstrual:'🌹', follicular:'🌷', ovulatory:'⚡️', luteal:'🍂' };
-  const weekTypes = { menstrual:'Machines', follicular:'Build', ovulatory:'Peak', luteal:'Maintain' };
-  const strip = document.getElementById('week-strip');
-  strip.innerHTML = days.map((d, i) => {
-    const isToday = i === todayIdx;
-    const isRest = i === 5 || i === 6;
-    const dayPhase = isRest ? null : state.phase;
-    let cls = 'ws-day' + (isToday ? ' today' : '') + (isRest ? ' rest' : '');
-    const icon = isRest ? '💤' : (weekPhases[dayPhase] || '🌸');
-    const type = isRest ? 'Rest' : (weekTypes[dayPhase] || '');
-    return `<div class="${cls}"><div class="ws-d-label">${d}</div><span class="ws-d-icon">${icon}</span><div class="ws-d-type">${type}</div></div>`;
-  }).join('');
+  renderWeekStrip();
 
   // workout card
   document.getElementById('wc-header').style.background = workout.color;
@@ -1351,6 +1469,9 @@ function finishWorkout() {
   state.workoutsCompleted++;
   state.streak++;
   state.totalMins += elapsed;
+  // Mark today as complete in the week planner
+  if (!state.weekCompletions) state.weekCompletions = {};
+  state.weekCompletions[new Date().toISOString().split('T')[0]] = true;
 
   // Save per-exercise history for progression engine
   const tier = getMLResult().modifier.tier;
