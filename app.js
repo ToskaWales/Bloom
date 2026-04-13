@@ -1440,46 +1440,76 @@ function renderProgress() {
 
   const phaseColors = { menstrual:'#F2A7B4', follicular:'#C9B8E8', ovulatory:'#F9C9A3', luteal:'#B8D4C0' };
 
-  // Strength chart (8-week squat 1RM trend)
-  const strengthData = [
-    { w:'W1', kg:60,  phase:'follicular' },
-    { w:'W2', kg:62,  phase:'follicular' },
-    { w:'W3', kg:65,  phase:'ovulatory'  },
-    { w:'W4', kg:62,  phase:'luteal'     },
-    { w:'W5', kg:60,  phase:'menstrual'  },
-    { w:'W6', kg:66,  phase:'follicular' },
-    { w:'W7', kg:70,  phase:'ovulatory', pr:true },
-    { w:'W8', kg:72,  phase:'ovulatory', pr:true },
-  ];
-  // Apply personal progress: each completed workout adds ~1.5kg
-  const boost = state.workoutsCompleted * 1.5;
-  const maxKg = Math.max(...strengthData.map(d => d.kg)) + boost;
+  // ── Strength chart: real load progression from most-trained exercise ──
   const chart = document.getElementById('strength-chart');
   const xlabels = document.getElementById('strength-x-labels');
-  chart.innerHTML = strengthData.map(d => {
-    const kg = d.kg + boost;
-    const hPct = Math.round((kg / (maxKg + 5)) * 100);
-    return `<div class="sc-bar-wrap">
-      <div class="sc-bar-kg">${Math.round(kg)}</div>
-      <div class="sc-bar${d.pr?' pr-dot':''}" style="height:${hPct}%;background:${phaseColors[d.phase]}"></div>
-    </div>`;
-  }).join('');
-  xlabels.innerHTML = strengthData.map(d => `<span>${d.w}</span>`).join('');
+  const chartSub = document.querySelector('#screen-progress .chart-card .chart-sub');
+  const prBadge = document.getElementById('chart-pr-badge');
+  const exHistory = state.exerciseHistory || {};
+  const exKeys = Object.keys(exHistory).filter(k => (exHistory[k].loads || []).length > 0);
+  if (exKeys.length === 0) {
+    chart.innerHTML = '<div style="width:100%;text-align:center;padding:24px 0;font-size:13px;color:var(--light)">Complete workouts to see your strength progress</div>';
+    xlabels.innerHTML = '';
+    if (chartSub) chartSub.textContent = 'No workout data yet';
+    if (prBadge) prBadge.style.display = 'none';
+  } else {
+    const bestKey = exKeys.reduce((a, b) => (exHistory[a].loads.length >= exHistory[b].loads.length ? a : b));
+    const exData = exHistory[bestKey];
+    const loads = exData.loads.slice(-8);
+    const maxLoad = Math.max(...loads);
+    const minLoad = Math.min(...loads);
+    const exName = EXERCISE_DB[bestKey]?.name || bestKey;
+    const gain = loads.length > 1 ? Math.round((loads[loads.length - 1] - loads[0]) * 10) / 10 : 0;
+    if (chartSub) chartSub.textContent = `${exName} · last ${loads.length} session${loads.length !== 1 ? 's' : ''}`;
+    if (prBadge) {
+      prBadge.style.display = gain > 0 ? '' : 'none';
+      prBadge.textContent = `+${gain} kg 📈`;
+    }
+    chart.innerHTML = loads.map((kg, i) => {
+      const range = maxLoad - minLoad || 1;
+      const hPct = Math.round(((kg - minLoad) / range) * 70 + 20);
+      const isPR = kg === maxLoad && i === loads.lastIndexOf(maxLoad);
+      return `<div class="sc-bar-wrap">
+        <div class="sc-bar-kg">${Math.round(kg)}</div>
+        <div class="sc-bar${isPR ? ' pr-dot' : ''}" style="height:${hPct}%;background:${phaseColors[state.phase || 'follicular']}"></div>
+      </div>`;
+    }).join('');
+    xlabels.innerHTML = loads.map((_, i) => `<span>S${i + 1}</span>`).join('');
+  }
 
-  // Phase breakdown bars
-  const phaseScores = {
-    menstrual:  28,
-    follicular: 72,
-    ovulatory:  getMLResult().features.phase === 'ovulatory' ? getMLResult().readiness.score : 91,
-    luteal:     45,
-  };
+  // ── Phase breakdown: average mood score per phase from moodHistory ──
+  const phaseMoodData = { menstrual:[], follicular:[], ovulatory:[], luteal:[] };
+  (state.moodHistory || []).forEach(entry => {
+    if (entry.phase && phaseMoodData[entry.phase] && entry.mood) {
+      const score = Math.round((entry.mood / 5) * 100 * 0.7 + ((entry.energy || 5) / 10) * 100 * 0.3);
+      phaseMoodData[entry.phase].push(score);
+    }
+  });
+  // Fall back to current ML score for the current phase if no history yet
+  const currentMLScore = getMLResult().readiness.score;
+  const phaseScores = {};
+  Object.keys(phaseMoodData).forEach(ph => {
+    if (phaseMoodData[ph].length > 0) {
+      phaseScores[ph] = Math.round(phaseMoodData[ph].reduce((a, b) => a + b, 0) / phaseMoodData[ph].length);
+    } else {
+      phaseScores[ph] = ph === state.phase ? currentMLScore : null;
+    }
+  });
   const breakdown = document.getElementById('phase-breakdown');
-  breakdown.innerHTML = Object.entries(phaseScores).map(([ph, score]) => `
-    <div class="pb-row">
+  breakdown.innerHTML = Object.entries(phaseScores).map(([ph, score]) => {
+    if (score === null) {
+      return `<div class="pb-row">
+        <span class="pb-phase" style="color:${phaseColors[ph]}">${PHASES[ph].icon} ${PHASES[ph].name}</span>
+        <div class="pb-bar-bg"><div class="pb-bar" style="width:0%;background:${phaseColors[ph]}" data-w="0%"></div></div>
+        <span class="pb-score" style="color:var(--light)">—</span>
+      </div>`;
+    }
+    return `<div class="pb-row">
       <span class="pb-phase" style="color:${phaseColors[ph]}">${PHASES[ph].icon} ${PHASES[ph].name}</span>
       <div class="pb-bar-bg"><div class="pb-bar" style="width:0%;background:${phaseColors[ph]}" data-w="${score}%"></div></div>
       <span class="pb-score">${score}</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   setTimeout(() => {
     breakdown.querySelectorAll('.pb-bar').forEach(b => {
       b.style.transition = 'width .8s cubic-bezier(.4,0,.2,1)';
@@ -1487,37 +1517,55 @@ function renderProgress() {
     });
   }, 100);
 
-  // Weekly volume bar chart
-  const weekData = [
-    { label:'W1', val:55, phase:'follicular' },
-    { label:'W2', val:80, phase:'ovulatory'  },
-    { label:'W3', val:45, phase:'luteal'     },
-    { label:'W4', val:30, phase:'menstrual'  },
-    { label:'W5', val:70, phase:'follicular' },
-    { label:'W6', val:90, phase:'ovulatory'  },
-    { label:'W7', val:60, phase:'luteal'     },
-  ];
+  // ── Weekly activity chart: active days per week from moodHistory ──
+  const today = new Date();
+  const moodByDate = {};
+  (state.moodHistory || []).forEach(e => { if (e.date) moodByDate[e.date] = e; });
+  const weekData = Array.from({ length: 7 }, (_, w) => {
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() - w * 7);
+    const weekStart = new Date(weekEnd);
+    weekStart.setDate(weekEnd.getDate() - 6);
+    let activeDays = 0;
+    let dominantPhase = 'follicular';
+    const phaseCounts = {};
+    for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+      const ds = d.toISOString().split('T')[0];
+      if (moodByDate[ds]) {
+        activeDays++;
+        const ph = moodByDate[ds].phase;
+        if (ph) phaseCounts[ph] = (phaseCounts[ph] || 0) + 1;
+      }
+    }
+    const topPhase = Object.keys(phaseCounts).sort((a, b) => phaseCounts[b] - phaseCounts[a])[0];
+    if (topPhase) dominantPhase = topPhase;
+    return { label: w === 0 ? 'This wk' : `${w}w ago`, val: activeDays, phase: dominantPhase };
+  }).reverse();
+  const maxDays = Math.max(...weekData.map(d => d.val), 1);
   document.getElementById('weekly-chart').innerHTML = weekData.map(d => `
     <div class="bar-wrap">
-      <div class="bar-val">${d.val}</div>
-      <div class="bar" style="height:${d.val}%;background:${phaseColors[d.phase]}"></div>
+      <div class="bar-val">${d.val > 0 ? d.val : ''}</div>
+      <div class="bar" style="height:${Math.round((d.val / maxDays) * 100)}%;background:${d.val > 0 ? phaseColors[d.phase] : '#f0f0f0'}"></div>
       <div class="bar-label">${d.label}</div>
     </div>`).join('');
 
-  // Mood heatmap
+  // ── Mood heatmap: last 28 calendar days, real data only ──
   const hm = document.getElementById('mood-heatmap');
   const moodOpacities = [0.2, 0.35, 0.5, 0.7, 0.9];
-  const cyclePhases = ['menstrual','menstrual','menstrual','menstrual','menstrual',
-    'follicular','follicular','follicular','follicular','follicular','follicular','follicular','follicular',
-    'ovulatory','ovulatory','ovulatory',
-    'luteal','luteal','luteal','luteal','luteal','luteal','luteal','luteal','luteal','luteal','luteal','luteal'];
-  hm.innerHTML = Array.from({length:28}, (_,i) => {
-    const mood = state.moodHistory[i] ? state.moodHistory[i].mood : Math.floor(Math.random()*5)+1;
-    const ph = cyclePhases[i] || 'follicular';
-    return `<div class="hm-cell" style="background:${phaseColors[ph]};opacity:${moodOpacities[mood-1] || 0.4}" title="Day ${i+1}: Mood ${mood}/5"></div>`;
+  hm.innerHTML = Array.from({ length: 28 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (27 - i));
+    const ds = d.toISOString().split('T')[0];
+    const entry = moodByDate[ds];
+    if (entry && entry.mood) {
+      const ph = entry.phase || 'follicular';
+      const opacity = moodOpacities[(entry.mood - 1)] || 0.4;
+      return `<div class="hm-cell" style="background:${phaseColors[ph]};opacity:${opacity}" title="${ds}: Mood ${entry.mood}/5"></div>`;
+    }
+    return `<div class="hm-cell" style="background:#e8e8e8;opacity:0.4" title="${ds}: No check-in"></div>`;
   }).join('');
 
-  // Celebration
+  // ── Celebration ──
   const texts = [
     `"You haven't started your first workout yet — but you're here. That's the first step. 🌸"`,
     `"${state.workoutsCompleted} workout${state.workoutsCompleted !== 1 ? 's' : ''} done. You're building a rhythm your body will thank you for. 💕"`,
@@ -1939,6 +1987,11 @@ function getDefaultCycle() {
       sore:      { menstrual:0.2, follicular:0.3, ovulatory:0.5, luteal:0.3 },
     },
   };
+}
+
+function showLoginFromOnboarding() {
+  document.getElementById('screen-onboarding').classList.remove('active');
+  document.getElementById('screen-auth').classList.add('active');
 }
 
 // ═══════════════════════════════════════════
