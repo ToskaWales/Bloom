@@ -1038,6 +1038,18 @@
   <button class="br-dismiss-btn" onclick="closeBadgeReveal()">Amazing! 🌸</button>
 </div>
 
+<!-- PHASE CORRECTION SHEET -->
+<div class="phase-correction-sheet" id="phase-correction-sheet" onclick="if(event.target===this)closePhaseCorrectionSheet()">
+  <div class="pcs-card">
+    <div class="pcs-handle"></div>
+    <div class="pcs-icon">🌸</div>
+    <div class="pcs-title">Not your period?</div>
+    <div class="pcs-desc">If Bloom has your phase wrong, you can move forward. This will update your cycle model and refresh today's plan.</div>
+    <button class="pcs-btn-primary" onclick="periodEnded()">Period ended — move to follicular →</button>
+    <button class="pcs-btn-cancel" onclick="closePhaseCorrectionSheet()">Keep as menstrual</button>
+  </div>
+</div>
+
 <!-- ACCOUNT SHEET -->
 
 <!-- PHOTO LIGHTBOX -->

@@ -780,8 +780,12 @@ const COPY_TEMPLATES = {
   PR_WINDOW:            (f) => `Estrogen and LH are peaking — this is your physical peak. Energy is strong. Today is the ideal day to go heavy or attempt a personal record. ⚡️`,
   PROGRESSIVE_OVERLOAD: (f) => `Estrogen is rising and your energy is strong (${f.energy}/10). Follicular phase is your best window for adding load. Bloom added a progressive overload suggestion. 💜`,
   MAINTAIN:             (f) => `Solid readiness today. Bloom's keeping the plan as-is — consistent, quality work is exactly what builds long-term strength. 🌸`,
-  SLIGHT_REDUCE:        (f) => `Energy is a little lower today (${f.energy}/10) and you're in ${f.phase} phase. Bloom slightly reduced volume to keep the session sustainable without sacrificing consistency. 💕`,
-  RECOVERY:             (f) => `Your energy is ${f.energy}/10 and the ${f.phase} phase means recovery is the priority. Bloom swapped to a lighter session — this protects the gains you made earlier. 🍃`,
+  SLIGHT_REDUCE:        (f) => f.energy >= 7
+    ? `You're in your ${f.phase} phase — Bloom slightly reduced volume to match your cycle's natural rhythm. Quality over quantity today. 💕`
+    : `Energy is a little lower today (${f.energy}/10). Bloom slightly reduced volume to keep the session sustainable without sacrificing consistency. 💕`,
+  RECOVERY:             (f) => f.energy >= 7
+    ? `You're in your ${f.phase} phase and recovery is the priority this week. Bloom shifted to a lighter session to protect your next peak window. 🍃`
+    : `Your energy is ${f.energy}/10 — recovery is the priority. Bloom swapped to a lighter session to protect the gains you made earlier. 🍃`,
 };
 
 // Main ML pipeline: compute all signals → return decision object
@@ -946,18 +950,39 @@ function renderPhaseEnergyCard() {
   document.getElementById('pec-phase-chip').textContent = phase.icon + ' ' + phase.name;
   document.getElementById('pec-phase-chip').style.background = phase.color + '44';
 
+  const f = ml.features;
   const descMap = {
     PR_WINDOW:            'Peak window — go heavy today ⚡️',
     PROGRESSIVE_OVERLOAD: 'Strength is building 💜',
     MAINTAIN:             'Solid foundation day 🌸',
-    SLIGHT_REDUCE:        'Listen and recover 🍃',
+    SLIGHT_REDUCE:        f.energy >= 7 ? 'Phase-aware volume today 🌿' : 'Listen and recover 🍃',
     DELOAD_ACWR:          'Protect the gains 🌿',
     SKIP_PATTERN:         'Show up, even gently 💕',
     SAFETY_OVERRIDE:      'Rest is training today 🩸',
-    RECOVERY:             'Recovery mode — move gently 🍃',
+    RECOVERY:             f.energy >= 7 ? 'Phase recovery mode 🍃' : 'Recovery mode — move gently 🍃',
   };
   document.getElementById('pec-desc').textContent =
     descMap[ml.modifier.action] || phase.chips[0] || '';
+
+  // Make phase chip tappable when in menstrual phase so user can correct it
+  const phaseChip = document.getElementById('pec-phase-chip');
+  if (state.phase === 'menstrual') {
+    phaseChip.style.cursor = 'pointer';
+    phaseChip.setAttribute('title', 'Not your period? Tap to correct');
+    phaseChip.onclick = showPhaseCorrectionSheet;
+    if (!phaseChip.querySelector('.pec-chip-hint')) {
+      const hint = document.createElement('span');
+      hint.className = 'pec-chip-hint';
+      hint.textContent = ' ·';
+      phaseChip.appendChild(hint);
+    }
+  } else {
+    phaseChip.style.cursor = '';
+    phaseChip.removeAttribute('title');
+    phaseChip.onclick = null;
+    const hint = phaseChip.querySelector('.pec-chip-hint');
+    if (hint) hint.remove();
+  }
 
   // SVG orb — size and glow tied to readiness score
   const orbR  = 8 + score * 0.13;     // 8 (score 0) → ~21 (score 100)
@@ -988,6 +1013,29 @@ function renderPhaseEnergyCard() {
       <circle cx="${dotX}" cy="${dotY}" r="3.5"
         fill="${phase.colorD}" opacity="0.95"/>
     </svg>`;
+}
+
+// ── Phase correction (user can say "period ended / not my period") ──
+function showPhaseCorrectionSheet() {
+  const sheet = document.getElementById('phase-correction-sheet');
+  if (sheet) sheet.classList.add('open');
+}
+function closePhaseCorrectionSheet() {
+  const sheet = document.getElementById('phase-correction-sheet');
+  if (sheet) sheet.classList.remove('open');
+}
+function periodEnded() {
+  // Shift lastPeriodStart so today becomes the first follicular day
+  const menstrualLen = (state.cycle && state.cycle.phaseLengths && state.cycle.phaseLengths.menstrual) || 5;
+  const d = new Date();
+  d.setDate(d.getDate() - (menstrualLen + 1));
+  state.cycle.lastPeriodStart = d.toISOString().split('T')[0];
+  advanceCycleDay();
+  invalidateML();
+  saveState();
+  closePhaseCorrectionSheet();
+  renderToday();
+  showToast('✨ Updated — moving to follicular phase');
 }
 
 // ═══════════════════════════════════════════
