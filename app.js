@@ -17,9 +17,13 @@ const state = {
   phase: null,
 
   // ── WEEK PLANNER ──
-  weekSchedule: null,       // bool[7] Mon–Sun: true = training day
-  weekScheduleWeek: null,   // ISO date of this week's Monday (for auto-reset)
-  weekCompletions: {},      // { 'YYYY-MM-DD': true } workout completed that day
+  weekSchedule: null,
+  weekScheduleWeek: null,
+  weekCompletions: {},
+
+  // ── GAMIFICATION ──
+  badges: [],      // string[] of earned badge keys
+  prHistory: [],   // { date, exercise, load, phase }[] for PR Queen badge
 
   // ── PERSONAL CYCLE MODEL ──
   // Seeded from onboarding, refined by "period started" events + symptom inference
@@ -99,6 +103,46 @@ const PHASES = {
     insight: '🍃 Progesterone slows recovery and raises core temperature. Cut volume ~20%, keep technique sharp. The gains from follicular consolidate now — protecting them is the goal.',
     volumeScale: 0.80, intensityMax: 'moderate', preferMachines: false,
   }
+};
+
+// ── ACHIEVEMENT BADGES ──
+const BADGES = {
+  first_bloom: {
+    icon: '🌸', name: 'First Bloom',
+    desc: 'You completed your very first Bloom workout.',
+    color: '#F2A7B4', colorD: '#E8849A',
+    check: () => state.workoutsCompleted >= 1,
+  },
+  streak_queen: {
+    icon: '🔥', name: 'Streak Queen',
+    desc: '7 workouts in a row. You\'re unstoppable.',
+    color: '#F9C9A3', colorD: '#F0A873',
+    check: () => state.streak >= 7,
+  },
+  pr_queen: {
+    icon: '👑', name: 'PR Queen',
+    desc: 'Hit a personal record. Your peak paid off.',
+    color: '#C9B8E8', colorD: '#A896D4',
+    check: () => (state.prHistory || []).length > 0,
+  },
+  phase_master: {
+    icon: '🌙', name: 'Phase Master',
+    desc: 'Trained across all 4 phases of your cycle.',
+    color: '#B8D4C0', colorD: '#8CBF9C',
+    check: () => new Set((state.moodHistory || []).map(e => e.phase).filter(Boolean)).size >= 4,
+  },
+  cycle_whisperer: {
+    icon: '✨', name: 'Cycle Whisperer',
+    desc: 'Your cycle model reached 80% confidence.',
+    color: '#F2A7B4', colorD: '#C9B8E8',
+    check: () => (state.cycle.confidence || 0) >= 0.8,
+  },
+  ten_strong: {
+    icon: '💪', name: '10 Workouts Strong',
+    desc: 'Double digits. You\'re building something real.',
+    color: '#F9C9A3', colorD: '#A896D4',
+    check: () => state.workoutsCompleted >= 10,
+  },
 };
 
 // ── EXERCISE LIBRARY ──
@@ -750,6 +794,143 @@ function showCheckin() { goTo('checkin'); }
 function goToWorkout() { goTo('workout'); }
 
 // ═══════════════════════════════════════════
+// ACHIEVEMENT BADGES
+// ═══════════════════════════════════════════
+
+let _badgeQueue = [];
+let _badgeShowing = false;
+
+function evaluateBadges() {
+  if (!state.badges) state.badges = [];
+  Object.keys(BADGES).forEach(key => {
+    if (!state.badges.includes(key) && BADGES[key].check()) {
+      state.badges.push(key);
+      _badgeQueue.push(key);
+    }
+  });
+  saveState();
+  if (_badgeQueue.length > 0 && !_badgeShowing) drainBadgeQueue();
+}
+
+function drainBadgeQueue() {
+  if (_badgeQueue.length === 0) { _badgeShowing = false; return; }
+  _badgeShowing = true;
+  showBadgeReveal(_badgeQueue.shift());
+}
+
+function showBadgeReveal(key) {
+  const badge = BADGES[key];
+  if (!badge) { drainBadgeQueue(); return; }
+
+  document.getElementById('br-icon').textContent = badge.icon;
+  document.getElementById('br-name').textContent = badge.name;
+  document.getElementById('br-desc').textContent = badge.desc;
+  document.getElementById('br-ring').style.borderColor = badge.colorD;
+
+  // Spawn CSS confetti
+  const layer = document.getElementById('badge-confetti-layer');
+  layer.innerHTML = '';
+  const colors = [badge.color, badge.colorD, '#fff', '#F9C9A3', '#C9B8E8'];
+  for (let i = 0; i < 24; i++) {
+    const s = document.createElement('span');
+    s.style.left              = Math.random() * 100 + '%';
+    s.style.background        = colors[i % colors.length];
+    s.style.animationDuration = (1.5 + Math.random() * 0.9) + 's';
+    s.style.animationDelay    = (Math.random() * 0.6) + 's';
+    s.style.transform         = `rotate(${Math.random() * 180}deg)`;
+    layer.appendChild(s);
+  }
+
+  // Re-trigger spring animation
+  const card = document.querySelector('.badge-reveal-card');
+  if (card) { card.style.animation = 'none'; requestAnimationFrame(() => { card.style.animation = ''; }); }
+
+  document.getElementById('badge-overlay').classList.add('open');
+}
+
+function closeBadgeReveal() {
+  document.getElementById('badge-overlay').classList.remove('open');
+  setTimeout(drainBadgeQueue, 300);
+}
+
+function getBadgeWallHTML() {
+  const earned = state.badges || [];
+  return Object.entries(BADGES).map(([key, badge]) => {
+    const isEarned = earned.includes(key);
+    const bg = isEarned ? badge.color + '33' : '#F0EAF4';
+    return `<div class="badge-item">
+      <div class="badge-item-icon ${isEarned ? 'earned' : 'locked'}" style="background:${bg}">${badge.icon}</div>
+      <div class="badge-item-name">${badge.name}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// PHASE ENERGY CARD
+// ═══════════════════════════════════════════
+
+function renderPhaseEnergyCard() {
+  const card = document.getElementById('phase-energy-card');
+  if (!card) return;
+  const phase  = PHASES[state.phase] || PHASES.follicular;
+  const ml     = getMLResult();
+  const score  = ml.readiness.score;
+  const cycDay = state.cycleDay || getCycleDay();
+  const cycLen = state.cycle.cycleLength || 28;
+
+  card.style.background = phase.bg;
+  card.style.color      = phase.textColor;
+
+  document.getElementById('pec-score').textContent      = score;
+  document.getElementById('pec-score').style.color      = phase.colorD;
+  document.getElementById('pec-phase-chip').textContent = phase.icon + ' ' + phase.name;
+  document.getElementById('pec-phase-chip').style.background = phase.color + '44';
+
+  const descMap = {
+    PR_WINDOW:            'Peak window — go heavy today ⚡️',
+    PROGRESSIVE_OVERLOAD: 'Strength is building 💜',
+    MAINTAIN:             'Solid foundation day 🌸',
+    SLIGHT_REDUCE:        'Listen and recover 🍃',
+    DELOAD_ACWR:          'Protect the gains 🌿',
+    SKIP_PATTERN:         'Show up, even gently 💕',
+    SAFETY_OVERRIDE:      'Rest is training today 🩸',
+    RECOVERY:             'Recovery mode — move gently 🍃',
+  };
+  document.getElementById('pec-desc').textContent =
+    descMap[ml.modifier.action] || phase.chips[0] || '';
+
+  // SVG orb — size and glow tied to readiness score
+  const orbR  = 8 + score * 0.13;     // 8 (score 0) → ~21 (score 100)
+  const glowR = orbR + 5;
+  const midOp = (score / 100 * 0.55 + 0.2).toFixed(2);
+  const dotAngle = (cycDay / cycLen) * 2 * Math.PI - Math.PI / 2;
+  const dotX  = (50 + 36 * Math.cos(dotAngle)).toFixed(1);
+  const dotY  = (50 + 36 * Math.sin(dotAngle)).toFixed(1);
+  const fId   = 'orb-blur-' + state.phase;
+
+  document.getElementById('pec-orb-wrap').innerHTML = `
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="${fId}" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="2.5"/>
+        </filter>
+      </defs>
+      <circle class="orbit-ring" cx="50" cy="50" r="36"
+        stroke="${phase.color}" stroke-width="1.5" fill="none" opacity="0.45"
+        style="animation:orbitRing 10s linear infinite"/>
+      <circle class="orbit-ring" cx="50" cy="50" r="26"
+        stroke="${phase.colorD}" stroke-width="1.5" fill="none" opacity="${midOp}"
+        style="animation:orbitRing 6s linear infinite reverse"/>
+      <circle cx="50" cy="50" r="${glowR}"
+        fill="${phase.color}" opacity="0.28" filter="url(#${fId})"/>
+      <circle cx="50" cy="50" r="${orbR.toFixed(1)}"
+        fill="${phase.colorD}" opacity="0.9"/>
+      <circle cx="${dotX}" cy="${dotY}" r="3.5"
+        fill="${phase.colorD}" opacity="0.95"/>
+    </svg>`;
+}
+
+// ═══════════════════════════════════════════
 // WEEK PLANNER
 // ═══════════════════════════════════════════
 
@@ -1215,6 +1396,7 @@ function submitCheckin() {
   }
 
   invalidateML();
+  evaluateBadges();
   saveState();
   renderToday();
   goTo('today', 'left');
@@ -1725,6 +1907,10 @@ function renderProgress() {
     `"${state.streak}-day streak 🔥 and ${state.listenedToBody} smart rest days. That balance is everything. ✨"`,
   ];
   document.getElementById('celebration-text').textContent = texts[Math.min(state.workoutsCompleted, texts.length - 1)];
+
+  // Badge wall
+  const badgeGrid = document.getElementById('badge-grid');
+  if (badgeGrid) badgeGrid.innerHTML = getBadgeWallHTML();
 }
 
 // ═══════════════════════════════════════════
