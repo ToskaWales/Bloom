@@ -258,8 +258,14 @@ function computeTarget(exKey, phase, tier) {
     load = roundToPlate(load * 0.95);
     label = '↓ RPE was high — load reduced 5%';
   } else if (lastRPE <= 6 && h.sessions > 0) {
-    if (scheme.loadStep > 0) { load += scheme.loadStep; isProgression = true; label = `↑ +${scheme.loadStep}kg · progressive overload`; }
-    else if (reps < scheme.repRange[1]) { reps++; isProgression = true; label = `↑ +1 rep · rep progression`; }
+    if (scheme.loadStep > 0) {
+      // Scale progression step by phase strength multiplier (ovulatory: 1.18×, menstrual: 0.85×)
+      const mult = (_mlResult && _mlResult.features) ? (_mlResult.features.strength_mult || 1.0) : 1.0;
+      const scaledStep = roundToPlate(scheme.loadStep * mult);
+      load += scaledStep;
+      isProgression = true;
+      label = `↑ +${scaledStep}kg · progressive overload`;
+    } else if (reps < scheme.repRange[1]) { reps++; isProgression = true; label = `↑ +1 rep · rep progression`; }
   }
 
   const sets = Math.max(2, Math.round(ex.baseSets * PHASES[phase].volumeScale));
@@ -270,10 +276,21 @@ function computeTarget(exKey, phase, tier) {
 }
 
 function needsDeload() {
+  // 1. Classic: recent compound barbell RPE average
   const compounds = ['barbell_squat','barbell_bench','barbell_row','barbell_ohp','sumo_deadlift'];
-  const recentRPEs = compounds.flatMap(k => (getExHistory(k).rpes||[]).slice(-3));
-  if (recentRPEs.length < 3) return false;
-  return recentRPEs.reduce((a,b)=>a+b,0) / recentRPEs.length >= 8.5;
+  const compoundRPEs = compounds.flatMap(k => (getExHistory(k).rpes||[]).slice(-3));
+  const compoundOverload = compoundRPEs.length >= 3 &&
+    compoundRPEs.reduce((a,b)=>a+b,0) / compoundRPEs.length >= 8.5;
+
+  // 2. Broad: high RPEs across any 6+ logged exercise sessions
+  const allRPEs = Object.values(state.exerciseHistory || {}).flatMap(h => (h.rpes||[]).slice(-2));
+  const broadFatigue = allRPEs.length >= 6 &&
+    allRPEs.reduce((a,b)=>a+b,0) / allRPEs.length >= 8.0;
+
+  // 3. ML fatigue signal: use cached result so we don't force a re-run
+  const mlFatigue = _mlResult && _mlResult.features && _mlResult.features.fatigueAccum > 0.80;
+
+  return compoundOverload || (broadFatigue && mlFatigue);
 }
 
 // ── SESSION TYPES ──
@@ -327,16 +344,24 @@ function selectSessionType(phase, tier) {
 
 function pickExercises(sessionMeta, phase, tier) {
   const picks = [];
+  // Penalise exercises done last session to encourage variety
+  const lastDone = new Set(state.lastWorkoutExercises || []);
   const ppg = typeof sessionMeta.picksPerGroup === 'object'
     ? sessionMeta.picksPerGroup
     : Object.fromEntries(sessionMeta.muscles.map(m => [m, sessionMeta.picksPerGroup || 1]));
   for (const muscle of sessionMeta.muscles) {
     const pool = (sessionMeta.exercises[muscle] || []).filter(k => EXERCISE_DB[k]);
     const n = ppg[muscle] || 1;
-    const sorted = pool.slice().sort((a,b) => (getExHistory(a).sessions||0) - (getExHistory(b).sessions||0));
+    // Sort by sessions done, but add a 4-session penalty for last-workout exercises
+    const sorted = pool.slice().sort((a,b) => {
+      const penA = lastDone.has(a) ? 4 : 0;
+      const penB = lastDone.has(b) ? 4 : 0;
+      return ((getExHistory(a).sessions||0) + penA) - ((getExHistory(b).sessions||0) + penB);
+    });
     const candidates = sorted.slice(0, Math.min(n+2, sorted.length));
     for (let i = 0; i < n && candidates.length > 0; i++) {
-      const idx = Math.random() < 0.35 && candidates.length > 1 ? 1 : 0;
+      // 50% chance of picking the second-best candidate (was 35%) for more variety
+      const idx = Math.random() < 0.50 && candidates.length > 1 ? 1 : 0;
       picks.push(candidates.splice(idx, 1)[0]);
     }
   }
@@ -351,6 +376,11 @@ function generatePlan(phase, tier) {
   const sessionType = selectSessionType(phase, tier);
   const meta = SESSION_META[sessionType] || SESSION_META['full_body'];
   const exKeys = pickExercises(meta, phase, tier);
+
+  // Order exercises: heavy compounds first, then moderate, then light accessories
+  const tierOrder = { heavy: 0, moderate: 1, light: 2 };
+  exKeys.sort((a, b) => (tierOrder[EXERCISE_DB[a]?.tier] ?? 1) - (tierOrder[EXERCISE_DB[b]?.tier] ?? 1));
+
   const phaseScale = (PHASES[phase] && PHASES[phase].volumeScale) || 1.0;
 
   // Apply user's chosen session duration scale (from onboarding)
@@ -367,13 +397,18 @@ function generatePlan(phase, tier) {
   };
   const reason = (phaseReasons[phase] || phaseReasons.follicular)[tier] || '"Solid session ahead. 🌸"';
 
+  // Volume modifier from ML pipeline (e.g. +20 for PR_WINDOW, -25 for RECOVERY)
+  const volumeMod = (_mlResult && _mlResult.modifier) ? (_mlResult.modifier.volumeMod || 0) : 0;
+
   // Build enriched exercise entries with progression data
   const exerciseEntries = exKeys.map(key => {
     const ex = EXERCISE_DB[key];
     const target = computeTarget(key, phase, tier);
     if (!ex) return null;
+    // Apply ML volumeMod to set count, keeping minimum 2
+    const rawSets = Math.max(2, Math.round(target.sets * (1 + volumeMod / 100)));
     const repsLabel = ex.muscle === 'core' && ex.name.includes('Plank') ? `${target.reps} sec` : `${target.reps}`;
-    return { ...ex, key, sets:`${target.sets} × ${repsLabel}`, targetLoad:target.load, isProgression:target.isProgression, progressionLabel:target.label };
+    return { ...ex, key, sets:`${rawSets} × ${repsLabel}`, targetLoad:target.load, isProgression:target.isProgression, progressionLabel:target.label };
   }).filter(Boolean);
 
   return {
@@ -610,26 +645,41 @@ function computeFeatures() {
   };
   const hormones = hormoneProxies[phase];
 
-  // ACWR — uses user's chosen weekly training days as baseline
-  const targetWeekly = (state.trainingDaysPerWeek || 3) * PHASES[phase].volumeScale;
-  const expectedWeekly = Math.max(1, Math.round(targetWeekly));
-  const doneThisWeek = Math.min(state.workoutsCompleted, 7);
-  const acwr = doneThisWeek > 0 ? (doneThisWeek / expectedWeekly) : 0.5;
+  // ACWR — rolling 28-day workout dates for an accurate chronic:acute ratio
+  const recentDates = state.recentWorkoutDates || [];
+  const now7  = new Date(Date.now() -  7 * MS_PER_DAY).toISOString().split('T')[0];
+  const now28 = new Date(Date.now() - 28 * MS_PER_DAY).toISOString().split('T')[0];
+  const doneThisWeek  = recentDates.filter(d => d > now7).length;
+  const doneLast28    = recentDates.filter(d => d >= now28).length;
+  const weeklyAvg     = doneLast28 / 4;
+  const acwr = weeklyAvg > 0 ? (doneThisWeek / weeklyAvg) : (doneThisWeek > 0 ? 1.0 : 0.5);
 
-  // Fatigue accumulation index (0–1): rises with consecutive sessions, high ACWR, low energy
-  const recentLoad = Math.min(state.workoutsCompleted * 0.12, 0.8);
+  // Fatigue accumulation index (0–1): rises with recent load + low energy
+  const recentLoad = Math.min(doneThisWeek * 0.18, 0.8);
   const energyPenalty = (10 - state.energy) / 10 * 0.4;
   const fatigueAccum = Math.min(0.95, recentLoad + energyPenalty);
 
-  // Skip rate proxy
-  const skipRate = state.workoutsCompleted === 0 ? 0 :
-    Math.max(0, 1 - (state.workoutsCompleted / Math.max(state.streak + state.workoutsCompleted, 1)));
+  // Skip rate — rolling 14-day adherence vs target
+  const scheduledLast14 = (state.trainingDaysPerWeek || 3) * 2;
+  const now14 = new Date(Date.now() - 14 * MS_PER_DAY).toISOString().split('T')[0];
+  const doneLast14 = recentDates.filter(d => d >= now14).length;
+  const skipRate = Math.max(0, 1 - doneLast14 / scheduledLast14);
 
   // 7-day mood average (use current mood as proxy if no history)
   const moodHistory = state.moodHistory.slice(-7).map(m => m.mood);
   const mood7dAvg = moodHistory.length > 0
     ? moodHistory.reduce((a,b) => a+b, 0) / moodHistory.length
     : state.mood;
+
+  // Energy trend: slope of last 7 energy readings (-1 = falling, +1 = rising)
+  const recentEnergies = (state.moodHistory || []).slice(-7).map(e => e.energy).filter(v => v != null);
+  let energyTrend = 0;
+  if (recentEnergies.length >= 3) {
+    const mid   = Math.floor(recentEnergies.length / 2);
+    const early = recentEnergies.slice(0, mid).reduce((a,b)=>a+b,0) / mid;
+    const late  = recentEnergies.slice(-mid).reduce((a,b)=>a+b,0) / mid;
+    energyTrend = Math.max(-1, Math.min(1, (late - early) / 10));
+  }
 
   // Energy delta vs naive baseline of 6
   const energyDelta = state.energy - 6;
@@ -644,6 +694,7 @@ function computeFeatures() {
     mood: state.mood,
     mood7dAvg,
     energyDelta,
+    energyTrend,
     fatigueAccum,
     acwr: Math.round(acwr * 100) / 100,
     skipRate,
@@ -661,13 +712,14 @@ function scoreReadiness(f) {
 
   // Feature weights (tuned to cycle physiology)
   const w = {
-    estrogen:     0.20,
-    lh_surge:     0.12,
-    energy_norm:  0.22,
-    mood_norm:    0.14,
+    estrogen:     0.18,  // phase-based hormonal readiness
+    lh_surge:     0.12,  // ovulatory peak signal
+    energy_norm:  0.20,  // today's energy rating
+    mood_norm:    0.12,  // today's mood rating
+    energy_trend: 0.08,  // 7-day energy trajectory (rising vs falling)
     fatigue_inv:  0.18,  // inverted — high fatigue = low readiness
     acwr_penalty: 0.09,  // penalise if ACWR > 1.3
-    skip_penalty: 0.05,
+    skip_penalty: 0.05,  // penalise low adherence
   };
 
   const energy_norm  = f.energy / 10;
@@ -675,12 +727,14 @@ function scoreReadiness(f) {
   const fatigue_inv  = 1 - f.fatigueAccum;
   const acwr_penalty = f.acwr > 1.3 ? (f.acwr - 1.3) * 0.5 : 0;
   const skip_penalty = f.skipRate * 0.3;
+  const energy_trend = f.energyTrend || 0;  // already normalised -1 to +1
 
   const raw =
     w.estrogen     * f.estrogen +
     w.lh_surge     * f.lh_surge +
     w.energy_norm  * energy_norm +
     w.mood_norm    * mood_norm +
+    w.energy_trend * energy_trend +
     w.fatigue_inv  * fatigue_inv -
     w.acwr_penalty * acwr_penalty -
     w.skip_penalty * skip_penalty;
@@ -688,13 +742,15 @@ function scoreReadiness(f) {
   const score = Math.round(Math.max(5, Math.min(98, raw * 100)));
 
   // SHAP-style attribution: which features contributed most
+  const trendLabel = energy_trend > 0.05 ? 'Energy trend ↑' : energy_trend < -0.05 ? 'Energy trend ↓' : 'Energy trend →';
   const contributions = [
-    { name: 'Energy today',        value: w.energy_norm * energy_norm,  color: 'var(--peach)' },
-    { name: 'Mood score',          value: w.mood_norm * mood_norm,       color: 'var(--lilac)' },
-    { name: 'Estrogen level',      value: w.estrogen * f.estrogen,       color: 'var(--rose)' },
-    { name: 'Fatigue index',       value: w.fatigue_inv * fatigue_inv,   color: 'var(--sage)' },
-    { name: 'LH surge (ovulation)',value: w.lh_surge * f.lh_surge,       color: 'var(--peach)' },
-    { name: 'Workload (ACWR)',      value: Math.max(0, 0.15 - acwr_penalty), color: 'var(--lilac)' },
+    { name: 'Energy today',        value: w.energy_norm  * energy_norm,                 color: 'var(--peach)' },
+    { name: 'Mood score',          value: w.mood_norm    * mood_norm,                   color: 'var(--lilac)' },
+    { name: 'Estrogen level',      value: w.estrogen     * f.estrogen,                  color: 'var(--rose)'  },
+    { name: 'Fatigue index',       value: w.fatigue_inv  * fatigue_inv,                 color: 'var(--sage)'  },
+    { name: 'LH surge (ovulation)',value: w.lh_surge     * f.lh_surge,                  color: 'var(--peach)' },
+    { name: 'Workload (ACWR)',     value: Math.max(0, 0.15 - acwr_penalty),             color: 'var(--lilac)' },
+    { name: trendLabel,            value: w.energy_trend * Math.max(0, energy_trend),   color: 'var(--sage)'  },
   ].sort((a,b) => b.value - a.value);
 
   return { score, confidence: 0.82 + Math.random() * 0.12, contributions };
@@ -1661,7 +1717,17 @@ function finishWorkout() {
   state.totalMins += elapsed;
   // Mark today as complete in the week planner
   if (!state.weekCompletions) state.weekCompletions = {};
-  state.weekCompletions[new Date().toISOString().split('T')[0]] = true;
+  const todayISO = new Date().toISOString().split('T')[0];
+  state.weekCompletions[todayISO] = true;
+
+  // Track rolling 28-day workout dates for real ACWR and skip-rate calculations
+  if (!state.recentWorkoutDates) state.recentWorkoutDates = [];
+  if (!state.recentWorkoutDates.includes(todayISO)) state.recentWorkoutDates.push(todayISO);
+  const cutoff28 = new Date(Date.now() - 28 * MS_PER_DAY).toISOString().split('T')[0];
+  state.recentWorkoutDates = state.recentWorkoutDates.filter(d => d >= cutoff28);
+
+  // Track last session's exercises for variety logic in the next plan
+  state.lastWorkoutExercises = (currentWorkout.exercises || []);
 
   // Save per-exercise history for progression engine
   const tier = getMLResult().modifier.tier;
