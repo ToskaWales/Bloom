@@ -1485,9 +1485,35 @@ function finishWorkout() {
   invalidateML();
 
   const kcalNum = parseInt((currentWorkout.kcal||'200').replace(/[^0-9]/g,'')) || 200;
-  document.getElementById('cc-mins').textContent = elapsed;
-  document.getElementById('cc-exercises').textContent = (currentWorkout.exercises||[]).length;
-  document.getElementById('cc-kcal-done').textContent = kcalNum;
+
+  // Track PRs for badge (any exercise with a new load high)
+  if (!state.prHistory) state.prHistory = [];
+  (currentWorkout.exercises || []).forEach(key => {
+    const h = getExHistory(key);
+    if (h.loads.length >= 2) {
+      const last = h.loads[h.loads.length - 1];
+      const prevBest = Math.max(...h.loads.slice(0, -1));
+      if (last > prevBest) {
+        state.prHistory.push({ date: new Date().toISOString().split('T')[0], exercise: key, load: last, phase: state.phase });
+        if (state.prHistory.length > 20) state.prHistory = state.prHistory.slice(-20);
+      }
+    }
+  });
+
+  // Populate share card
+  const phaseGradients = {
+    menstrual:  'linear-gradient(160deg,#F2A7B4,#E8849A)',
+    follicular: 'linear-gradient(160deg,#C9B8E8,#A896D4)',
+    ovulatory:  'linear-gradient(160deg,#F9C9A3,#F0A873)',
+    luteal:     'linear-gradient(160deg,#B8D4C0,#8CBF9C)',
+  };
+  document.getElementById('share-card').style.background = phaseGradients[state.phase] || phaseGradients.follicular;
+  document.getElementById('sc-hero-emoji').textContent  = currentWorkout.emoji || '🌸';
+  document.getElementById('sc-workout-name').textContent = currentWorkout.name || 'Today\'s Workout';
+  document.getElementById('sc-mins-chip').textContent   = `${elapsed} min`;
+  document.getElementById('sc-exer-chip').textContent   = `${(currentWorkout.exercises||[]).length} exercises`;
+  document.getElementById('sc-kcal-chip').textContent   = `${kcalNum} kcal`;
+  document.getElementById('sc-streak-line').textContent = `🔥 ${state.streak}-day streak`;
 
   const completionMsgs = [
     `You showed up for yourself today. Every session is a vote for who you're becoming. 💕`,
@@ -1495,8 +1521,13 @@ function finishWorkout() {
     `Workout ${state.workoutsCompleted} done. Building something beautiful — one session at a time. ✨`,
     `Bloom logged avg RPE ${avgRPEStr} and will fine-tune your next session accordingly. 💜`,
   ];
-  document.getElementById('cc-msg').textContent = completionMsgs[state.workoutsCompleted % completionMsgs.length];
+  document.getElementById('sc-msg').textContent = completionMsgs[state.workoutsCompleted % completionMsgs.length];
+
   document.getElementById('completion-overlay').classList.add('open');
+
+  // Evaluate badges after a short delay so the share card is seen first
+  setTimeout(() => evaluateBadges(), 700);
+
   saveState();
 }
 

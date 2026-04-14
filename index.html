@@ -980,20 +980,42 @@
   </div>
 </div>
 
-<!-- COMPLETION OVERLAY -->
+<!-- COMPLETION / SHARE CARD OVERLAY -->
 
-<div class="completion-overlay" id="completion-overlay">
-  <div class="completion-card">
-    <span class="cc-confetti">🎉</span>
-    <div class="cc-big-title">You <em>did it!</em></div>
-    <div class="cc-msg" id="cc-msg">Amazing work. Bloom has recorded your session and updated your plan for next time. 💕</div>
-    <div class="cc-stats" id="cc-stats-row">
-      <div class="cc-stat"><span class="cc-stat-val" id="cc-mins">—</span><span class="cc-stat-label">minutes</span></div>
-      <div class="cc-stat"><span class="cc-stat-val" id="cc-exercises">—</span><span class="cc-stat-label">exercises</span></div>
-      <div class="cc-stat"><span class="cc-stat-val" id="cc-kcal-done">—</span><span class="cc-stat-label">kcal</span></div>
+<div class="completion-overlay" id="completion-overlay" onclick="closeCompletion()">
+  <div class="share-card" id="share-card">
+    <div class="sc-wordmark">bloom</div>
+    <div class="sc-hero">
+      <span class="sc-hero-emoji" id="sc-hero-emoji">🌸</span>
+      <div class="sc-did-it">You <em>did it.</em></div>
+      <div class="sc-workout-name" id="sc-workout-name">Today's Workout</div>
     </div>
-    <button class="btn-primary" onclick="closeCompletion()">Back to today 🌸</button>
+    <div class="sc-stats-row">
+      <span class="sc-stat-chip" id="sc-mins-chip">— min</span>
+      <span class="sc-stat-chip" id="sc-exer-chip">— exercises</span>
+      <span class="sc-stat-chip" id="sc-kcal-chip">— kcal</span>
+    </div>
+    <div class="sc-divider"></div>
+    <div class="sc-streak-line" id="sc-streak-line">🔥 1-day streak</div>
+    <div class="sc-msg" id="sc-msg"></div>
+    <div class="sc-branding">bloom · train with your cycle</div>
   </div>
+  <div class="sc-dismiss-hint">Tap anywhere to continue →</div>
+</div>
+
+<!-- BADGE REVEAL OVERLAY -->
+
+<div class="badge-overlay" id="badge-overlay" onclick="closeBadgeReveal()">
+  <div class="badge-confetti-layer" id="badge-confetti-layer"></div>
+  <div class="badge-reveal-card">
+    <div class="br-unlock-label">Achievement Unlocked</div>
+    <div class="br-ring" id="br-ring">
+      <span class="br-icon" id="br-icon">🌸</span>
+    </div>
+    <div class="br-name" id="br-name">First Bloom</div>
+    <div class="br-desc" id="br-desc">You completed your first workout.</div>
+  </div>
+  <button class="br-dismiss-btn" onclick="closeBadgeReveal()">Amazing! 🌸</button>
 </div>
 
 <!-- ACCOUNT SHEET -->
