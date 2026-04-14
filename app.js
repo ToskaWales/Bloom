@@ -1,4 +1,13 @@
 // ═══════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════
+const MS_PER_DAY = 86400000;
+const DEFAULT_PHASE_LENGTHS = Object.freeze({ menstrual: 5, follicular: 8, ovulatory: 3, luteal: 12 });
+
+/** Round a load value to the nearest 1.25 kg plate increment. */
+function roundToPlate(load) { return Math.round(load / 1.25) * 1.25; }
+
+// ═══════════════════════════════════════════
 // APP STATE
 // ═══════════════════════════════════════════
 const state = {
@@ -32,12 +41,7 @@ const state = {
     lastPeriodStart: null,
     // Learned personal phase lengths (days). Defaults = population averages.
     // Updated every time a new period is confirmed.
-    phaseLengths: {
-      menstrual:  5,   // days of bleeding
-      follicular: 8,   // days from bleed-end to ovulation
-      ovulatory:  3,   // ovulation window
-      luteal:     12,  // luteal phase
-    },
+    phaseLengths: { ...DEFAULT_PHASE_LENGTHS },
     // Total learned cycle length (sum of above)
     cycleLength: 28,
     // Historical period start dates (ISO strings) — used to learn inter-cycle timing
@@ -251,7 +255,7 @@ function computeTarget(exKey, phase, tier) {
   let isProgression = false, label = '';
 
   if (lastRPE >= 9) {
-    load = Math.round(load * 0.95 / 1.25) * 1.25;
+    load = roundToPlate(load * 0.95);
     label = '↓ RPE was high — load reduced 5%';
   } else if (lastRPE <= 6 && h.sessions > 0) {
     if (scheme.loadStep > 0) { load += scheme.loadStep; isProgression = true; label = `↑ +${scheme.loadStep}kg · progressive overload`; }
@@ -260,7 +264,7 @@ function computeTarget(exKey, phase, tier) {
 
   const sets = Math.max(2, Math.round(ex.baseSets * PHASES[phase].volumeScale));
   if (state.symptoms.includes('cramps')) {
-    return { load: Math.max(0, Math.round(load * 0.80 / 1.25) * 1.25), reps: scheme.repRange[1], sets: 2, isProgression: false, label: '🩸 Load reduced for today' };
+    return { load: Math.max(0, roundToPlate(load * 0.80)), reps: scheme.repRange[1], sets: 2, isProgression: false, label: '🩸 Load reduced for today' };
   }
   return { load: Math.max(0, load), reps: Math.max(scheme.repRange[0], Math.min(scheme.repRange[1], reps)), sets, isProgression, label };
 }
@@ -397,7 +401,7 @@ function getCycleDay() {
   if (!state.cycle.lastPeriodStart) return state.cycleDay || 14;
   const start = new Date(state.cycle.lastPeriodStart);
   const today = new Date();
-  const diffDays = Math.floor((today - start) / 86400000);
+  const diffDays = Math.floor((today - start) / MS_PER_DAY);
   // Wrap around if past full cycle length
   return (diffDays % (state.cycle.cycleLength || 28)) + 1;
 }
@@ -460,7 +464,7 @@ function recordPeriodStart() {
   // Learn cycle length from gap between this and last period
   if (state.cycle.periodHistory.length > 0) {
     const last = new Date(state.cycle.periodHistory[state.cycle.periodHistory.length - 1]);
-    const gapDays = Math.round((new Date(today) - last) / 86400000);
+    const gapDays = Math.round((new Date(today) - last) / MS_PER_DAY);
 
     if (gapDays >= 20 && gapDays <= 45) {
       // Valid cycle — update learned cycle length with exponential smoothing
@@ -539,7 +543,7 @@ async function tryHealthKitSync() {
       if (perms.some(p => p.name === 'menstruation' && p.granted)) {
         const records = await navigator.health.query({
           type: 'menstruation',
-          startTime: new Date(Date.now() - 90 * 86400000).toISOString(),
+          startTime: new Date(Date.now() - 90 * MS_PER_DAY).toISOString(),
           endTime:   new Date().toISOString(),
         });
         if (records && records.length > 0) {
@@ -560,7 +564,7 @@ async function tryHealthKitSync() {
             const gaps = [];
             for (let i = 1; i < state.cycle.periodHistory.length; i++) {
               const g = Math.round(
-                (new Date(state.cycle.periodHistory[i]) - new Date(state.cycle.periodHistory[i-1])) / 86400000
+                (new Date(state.cycle.periodHistory[i]) - new Date(state.cycle.periodHistory[i-1])) / MS_PER_DAY
               );
               if (g >= 20 && g <= 45) gaps.push(g);
             }
@@ -1379,6 +1383,7 @@ function submitCheckin() {
     symptoms: [...state.symptoms],
     date: new Date().toISOString().split('T')[0],
   });
+  if (state.moodHistory.length > 90) state.moodHistory = state.moodHistory.slice(-90);
 
   // Live update symptom weights based on confirmed phase
   // (gentle Bayesian update — not just overwrite)
@@ -2314,7 +2319,7 @@ function loadStateLocal() {
 function getDefaultCycle() {
   return {
     lastPeriodStart: null,
-    phaseLengths: { menstrual:5, follicular:8, ovulatory:3, luteal:12 },
+    phaseLengths: { ...DEFAULT_PHASE_LENGTHS },
     cycleLength: 28, periodHistory: [], confidence: 0.4,
     healthKitLinked: false,
     symptomWeights: {
@@ -2388,13 +2393,14 @@ function toggleMuscle(el, muscle) {
   }
   el.classList.toggle('selected');
   const all = [...document.querySelectorAll('#muscle-grid .muscle-btn.selected')].map(b => {
-    return b.getAttribute('onclick').match(/'([^']+)'/)[1];
-  });
+    return b.dataset.muscle;
+  }).filter(Boolean);
   state.focusMuscles = all;
 }
 
 // ── Step 5: Days + Duration ──
 function selectDays(el, n) {
+  if (![2, 3, 4, 5].includes(n)) return;
   document.querySelectorAll('.day-pick-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   state.trainingDaysPerWeek = n;
@@ -2409,6 +2415,7 @@ function selectDays(el, n) {
 }
 
 function selectDuration(el, mins) {
+  if (![30, 45, 60, 75].includes(mins)) return;
   document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   state.sessionDurationMins = mins;
@@ -2440,7 +2447,8 @@ function selectRegularity(el, type, cycleLen) {
 function selectCycleLength(el, days) {
   document.querySelectorAll('#cycle-length-picker .cl-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  state.cycle.cycleLength = days === 35 ? 35 : days;
+  const clamped = Math.min(50, Math.max(20, parseInt(days, 10) || 28));
+  state.cycle.cycleLength = clamped;
   // Recalculate phase lengths from cycle length
   const bleed = state.cycle.phaseLengths.menstrual;
   const ovu = 3;
@@ -2463,7 +2471,7 @@ function selectPeriodDays(el, days) {
 
 // ── Step 9: Next period + symptoms ──
 function setNextPeriodDays(val) {
-  const n = parseInt(val);
+  const n = parseInt(val, 10);
   daysUntilNextPeriod = (!isNaN(n) && n >= 1 && n <= 90) ? n : null;
 }
 
@@ -2536,7 +2544,10 @@ function finishOnboarding() {
 }
 
 // Legacy - kept for any remaining references
-function updateLevel(val) { state.level = parseInt(val); }
+function updateLevel(val) {
+  const n = parseInt(val, 10);
+  if (!isNaN(n)) state.level = Math.min(3, Math.max(1, n));
+}
 function toggleGoal(el, goal) {
   el.classList.toggle('selected');
   if (!state.goals.includes(goal)) state.goals.push(goal);
@@ -2566,14 +2577,42 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+const ALLOWED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/gif']);
+const MAX_PHOTO_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
 function handlePhotoFiles(e) {
-  const files = Array.from(e.target.files);
-  if (!files.length) return;
+  const rawFiles = Array.from(e.target.files);
+  if (!rawFiles.length) return;
+
+  const files = rawFiles.filter(file => {
+    if (!ALLOWED_PHOTO_TYPES.has(file.type)) {
+      showToast(`\u26a0\ufe0f ${file.name}: unsupported type — use JPG, PNG or WebP`);
+      return false;
+    }
+    if (file.size > MAX_PHOTO_SIZE_BYTES) {
+      showToast(`\u26a0\ufe0f ${file.name}: too large (max 10 MB)`);
+      return false;
+    }
+    return true;
+  });
+
+  if (!files.length) { e.target.value = ''; return; }
+
   _pendingPhotos = [];
   const strip = document.getElementById('photos-preview-strip');
   strip.innerHTML = '';
 
-  let loaded = 0;
+  let settled = 0;
+  const total = files.length;
+
+  const maybeShowForm = () => {
+    if (settled === total && _pendingPhotos.length > 0) {
+      document.getElementById('photos-form').style.display = 'block';
+      document.getElementById('photo-date-input').value = new Date().toISOString().split('T')[0];
+      document.getElementById('photo-caption-input').value = '';
+    }
+  };
+
   files.forEach(file => {
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -2582,12 +2621,13 @@ function handlePhotoFiles(e) {
       img.src = ev.target.result;
       img.className = 'photos-preview-thumb';
       strip.appendChild(img);
-      loaded++;
-      if (loaded === files.length) {
-        document.getElementById('photos-form').style.display = 'block';
-        document.getElementById('photo-date-input').value = new Date().toISOString().split('T')[0];
-        document.getElementById('photo-caption-input').value = '';
-      }
+      settled++;
+      maybeShowForm();
+    };
+    reader.onerror = () => {
+      settled++;
+      showToast(`\u26a0\ufe0f Could not read ${file.name}`);
+      maybeShowForm();
     };
     reader.readAsDataURL(file);
   });
@@ -2609,7 +2649,7 @@ function saveProgressPhotos() {
 
   _pendingPhotos.forEach(dataUrl => {
     photos.push({
-      id: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '_' + Math.random().toString(36).slice(2, 9)),
       src: dataUrl,
       date: date,
       caption: caption,
@@ -2661,21 +2701,44 @@ function renderPhotosGallery() {
     const card = document.createElement('div');
     card.className = 'photo-card';
     card.style.animationDelay = (i * 0.06) + 's';
-    const displayDate = formatPhotoDate(photo.date);
-    card.innerHTML = `
-      <img class="photo-card-img" src="${photo.src}" alt="Progress photo" onclick="openLightbox('${photo.id}')">
-      <div class="photo-card-info">
-        <div class="photo-card-date">${displayDate}</div>
-        ${photo.caption ? `<div class="photo-card-caption">${escapeHtml(photo.caption)}</div>` : ''}
-      </div>
-      <button class="photo-card-delete" onclick="deleteProgressPhoto('${photo.id}')">🗑️ Delete</button>
-    `;
+
+    const img = document.createElement('img');
+    img.className = 'photo-card-img';
+    img.src = photo.src;
+    img.alt = 'Progress photo';
+    img.addEventListener('click', () => openLightbox(photo.id));
+
+    const info = document.createElement('div');
+    info.className = 'photo-card-info';
+
+    const dateDiv = document.createElement('div');
+    dateDiv.className = 'photo-card-date';
+    dateDiv.textContent = formatPhotoDate(photo.date);
+    info.appendChild(dateDiv);
+
+    if (photo.caption) {
+      const capDiv = document.createElement('div');
+      capDiv.className = 'photo-card-caption';
+      capDiv.textContent = photo.caption;
+      info.appendChild(capDiv);
+    }
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'photo-card-delete';
+    delBtn.textContent = '🗑️ Delete';
+    delBtn.addEventListener('click', () => deleteProgressPhoto(photo.id));
+
+    card.appendChild(img);
+    card.appendChild(info);
+    card.appendChild(delBtn);
     gallery.appendChild(card);
   });
 }
 
 function formatPhotoDate(dateStr) {
+  if (!dateStr) return 'Unknown date';
   const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return 'Unknown date';
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
