@@ -1103,6 +1103,9 @@ function renderToday() {
   document.getElementById('phase-desc').textContent = phase.desc;
   document.getElementById('phase-chips').innerHTML = phase.chips.map(c => `<span class="phase-chip">${c}</span>`).join('');
 
+  // Phase energy card
+  renderPhaseEnergyCard();
+
   // week strip
   renderWeekStrip();
 
