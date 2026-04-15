@@ -267,7 +267,7 @@
 
   <!-- Step 9: Next period + symptoms -->
   <div class="ob-step ob-step-hidden" id="ob-step-9">
-    <div class="ob-progress"><div class="ob-progress-fill" style="width:100%"></div></div>
+    <div class="ob-progress"><div class="ob-progress-fill" style="width:90%"></div></div>
     <button class="ob-back-btn" onclick="obNext(8)">← Back</button>
     <span class="ob-emoji" style="font-size:36px">🩸</span>
     <div class="ob-title">When is your next <em>period due?</em></div>
@@ -295,7 +295,39 @@
       </div>
     </div>
 
-    <button class="btn-primary" style="margin-top:24px" onclick="finishOnboarding()">Start training 🌸</button>
+    <button class="btn-primary" style="margin-top:24px" onclick="obNext(10)">Almost there →</button>
+  </div>
+
+  <!-- Step 10: Pet companion -->
+  <div class="ob-step ob-step-hidden" id="ob-step-10">
+    <div class="ob-progress"><div class="ob-progress-fill" style="width:100%"></div></div>
+    <button class="ob-back-btn" onclick="obNext(9)">← Back</button>
+    <span class="ob-emoji" style="font-size:36px">🐾</span>
+    <div class="ob-title">Pick your <em>companion.</em></div>
+    <div class="ob-subtitle">Your pet thrives when you do — workouts and check-ins keep them happy. Skip a few days and they'll let you know!</div>
+    <div class="pet-pick-grid" id="pet-pick-grid">
+      <div class="pet-pick-btn" onclick="selectPet(this,'cat')">
+        <span class="ppb-emoji">🐱</span>
+        <strong class="ppb-name">Luna</strong>
+        <span class="ppb-sub">Cat · curious & loyal</span>
+      </div>
+      <div class="pet-pick-btn" onclick="selectPet(this,'bunny')">
+        <span class="ppb-emoji">🐰</span>
+        <strong class="ppb-name">Clover</strong>
+        <span class="ppb-sub">Bunny · soft & sweet</span>
+      </div>
+      <div class="pet-pick-btn" onclick="selectPet(this,'dog')">
+        <span class="ppb-emoji">🐶</span>
+        <strong class="ppb-name">Poppy</strong>
+        <span class="ppb-sub">Dog · playful & bold</span>
+      </div>
+      <div class="pet-pick-btn" onclick="selectPet(this,'flower')">
+        <span class="ppb-emoji">🌸</span>
+        <strong class="ppb-name">Bloom</strong>
+        <span class="ppb-sub">Flower · your namesake</span>
+      </div>
+    </div>
+    <button class="btn-primary" id="ob-pet-btn" onclick="finishOnboarding()" disabled style="opacity:.5">Let's go! 🐾</button>
   </div>
 </div>
 
@@ -373,6 +405,24 @@
       <div class="pec-desc" id="pec-desc">Your body is building momentum.</div>
     </div>
     <div class="pec-orb-wrap" id="pec-orb-wrap"></div>
+  </div>
+
+  <!-- Pet companion card -->
+  <div class="pet-card" id="pet-card" style="display:none">
+    <div class="pet-card-label">YOUR COMPANION</div>
+    <div class="pet-body">
+      <div class="pet-avatar" id="pet-avatar">🐱</div>
+      <div class="pet-info">
+        <div class="pet-name-row">
+          <span class="pet-name" id="pet-name">Luna</span>
+          <span class="pet-mood-label" id="pet-mood-label">Thriving ✨</span>
+        </div>
+        <div class="pet-bar-wrap">
+          <div class="pet-health-fill" id="pet-health-fill" style="width:100%;background:var(--sage-d)"></div>
+        </div>
+        <div class="pet-hint" id="pet-hint">Keep up the great work!</div>
+      </div>
+    </div>
   </div>
 
   <div class="week-strip-wrap">
