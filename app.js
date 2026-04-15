@@ -992,14 +992,49 @@ function decayPetHealth() {
 function renderPetCard() {
   const card = document.getElementById('pet-card');
   if (!card) return;
-  const pd = getPetData();
-  if (!pd) { card.style.display = 'none'; return; }
   card.style.display = 'block';
 
-  document.getElementById('pet-avatar').textContent = pd.emoji;
-  document.getElementById('pet-name').textContent    = pd.def.name;
-  document.getElementById('pet-mood-label').textContent = pd.mood;
-  document.getElementById('pet-hint').textContent    = pd.hint;
+  const pd = getPetData();
+
+  // No pet yet — show inline picker so existing users can adopt one
+  if (!pd) {
+    card.innerHTML = `
+      <div class="pet-card-label">YOUR COMPANION</div>
+      <div style="font-size:13px;color:var(--ink);font-weight:600;margin-bottom:4px">Pick a companion 🐾</div>
+      <div style="font-size:11px;color:var(--mid);margin-bottom:14px">They thrive on your workouts & check-ins!</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        ${Object.entries(PET_TYPES).map(([key, p]) => `
+          <button onclick="adoptPet('${key}')" style="background:#F7F2FA;border:1.5px solid rgba(202,168,186,0.3);border-radius:14px;padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-family:'Nunito',sans-serif;transition:all .2s">
+            <span style="font-size:28px;line-height:1">${p.emoji}</span>
+            <span style="font-size:10px;font-weight:700;color:var(--ink)">${p.name}</span>
+          </button>`).join('')}
+      </div>`;
+    return;
+  }
+
+  // Restore standard card markup if coming from picker state
+  if (!document.getElementById('pet-avatar')) {
+    card.innerHTML = `
+      <div class="pet-card-label">YOUR COMPANION</div>
+      <div class="pet-body">
+        <div class="pet-avatar" id="pet-avatar"></div>
+        <div class="pet-info">
+          <div class="pet-name-row">
+            <span class="pet-name" id="pet-name"></span>
+            <span class="pet-mood-label" id="pet-mood-label"></span>
+          </div>
+          <div class="pet-bar-wrap">
+            <div class="pet-health-fill" id="pet-health-fill" style="width:100%;background:var(--sage-d)"></div>
+          </div>
+          <div class="pet-hint" id="pet-hint"></div>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('pet-avatar').textContent      = pd.emoji;
+  document.getElementById('pet-name').textContent        = pd.def.name;
+  document.getElementById('pet-mood-label').textContent  = pd.mood;
+  document.getElementById('pet-hint').textContent        = pd.hint;
 
   const fill = document.getElementById('pet-health-fill');
   fill.style.width      = pd.health + '%';
@@ -1013,6 +1048,19 @@ function renderPetCard() {
   } else {
     avatar.style.animation = 'none';
   }
+}
+
+function adoptPet(type) {
+  state.pet = {
+    type,
+    health: 100,
+    lastFedDate: new Date().toISOString().split('T')[0],
+    totalFeeds: 0,
+  };
+  saveState();
+  renderPetCard();
+  const name = (PET_TYPES[type] || PET_TYPES.cat).name;
+  showToast(`${PET_TYPES[type].emoji} ${name} is now your companion!`);
 }
 
 let _selectedPet = null;
