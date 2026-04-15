@@ -34,6 +34,9 @@ const state = {
   badges: [],      // string[] of earned badge keys
   prHistory: [],   // { date, exercise, load, phase }[] for PR Queen badge
 
+  // ── VIRTUAL PET ──
+  pet: null,       // { type, health, lastFedDate, totalFeeds } or null
+
   // ── PERSONAL CYCLE MODEL ──
   // Seeded from onboarding, refined by "period started" events + symptom inference
   cycle: {
@@ -147,6 +150,14 @@ const BADGES = {
     color: '#F9C9A3', colorD: '#A896D4',
     check: () => state.workoutsCompleted >= 10,
   },
+};
+
+// ── VIRTUAL PET ──
+const PET_TYPES = {
+  cat:    { emoji: '🐱', name: 'Luna',   happy: '😻', hungry: '🙀', sad: '😿' },
+  bunny:  { emoji: '🐰', name: 'Clover', happy: '🥰', hungry: '😢', sad: '😢' },
+  dog:    { emoji: '🐶', name: 'Poppy',  happy: '🥳', hungry: '🥺', sad: '😰' },
+  flower: { emoji: '🌸', name: 'Bloom',  happy: '🌺', hungry: '🌷', sad: '🥀' },
 };
 
 // ── EXERCISE LIBRARY ──
@@ -930,6 +941,90 @@ function getBadgeWallHTML() {
 }
 
 // ═══════════════════════════════════════════
+// VIRTUAL PET
+// ═══════════════════════════════════════════
+
+function getPetData() {
+  if (!state.pet || !state.pet.type) return null;
+  const def = PET_TYPES[state.pet.type] || PET_TYPES.cat;
+  const health = state.pet.health ?? 100;
+  let mood, emoji, hint, barColor;
+  if (health >= 80) {
+    mood = 'Thriving ✨'; emoji = def.happy;
+    hint = 'Keep it up — ' + def.name + ' loves your dedication!';
+    barColor = 'var(--sage-d)';
+  } else if (health >= 60) {
+    mood = 'Happy 🌸'; emoji = def.emoji;
+    hint = 'Check in or work out to keep ' + def.name + ' happy!';
+    barColor = 'var(--sage)';
+  } else if (health >= 35) {
+    mood = 'Getting hungry 🍽️'; emoji = def.hungry;
+    hint = def.name + ' needs a workout or check-in today!';
+    barColor = 'var(--peach)';
+  } else {
+    mood = 'Really sad 😢'; emoji = def.sad;
+    hint = def.name + ' really misses you — come back and work out! 💕';
+    barColor = 'var(--rose-d)';
+  }
+  return { def, health, mood, emoji, hint, barColor };
+}
+
+function feedPet(amount) {
+  if (!state.pet || !state.pet.type) return;
+  const today = new Date().toISOString().split('T')[0];
+  state.pet.health = Math.min(100, (state.pet.health ?? 50) + amount);
+  state.pet.lastFedDate = today;
+  state.pet.totalFeeds = (state.pet.totalFeeds || 0) + 1;
+}
+
+function decayPetHealth() {
+  if (!state.pet || !state.pet.type) return;
+  const today = new Date().toISOString().split('T')[0];
+  const lastFed = state.pet.lastFedDate;
+  if (!lastFed) { state.pet.lastFedDate = today; return; }
+  const days = Math.floor((new Date(today) - new Date(lastFed)) / MS_PER_DAY);
+  if (days > 0) {
+    // 20 health lost per missed day, min 5 so pet never fully disappears
+    state.pet.health = Math.max(5, (state.pet.health ?? 100) - days * 20);
+  }
+}
+
+function renderPetCard() {
+  const card = document.getElementById('pet-card');
+  if (!card) return;
+  const pd = getPetData();
+  if (!pd) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  document.getElementById('pet-avatar').textContent = pd.emoji;
+  document.getElementById('pet-name').textContent    = pd.def.name;
+  document.getElementById('pet-mood-label').textContent = pd.mood;
+  document.getElementById('pet-hint').textContent    = pd.hint;
+
+  const fill = document.getElementById('pet-health-fill');
+  fill.style.width      = pd.health + '%';
+  fill.style.background = pd.barColor;
+
+  const avatar = document.getElementById('pet-avatar');
+  if (pd.health >= 80) {
+    avatar.style.animation = 'petBounce 2s ease-in-out infinite';
+  } else if (pd.health < 35) {
+    avatar.style.animation = 'petShiver 0.4s ease-in-out infinite';
+  } else {
+    avatar.style.animation = 'none';
+  }
+}
+
+let _selectedPet = null;
+function selectPet(el, type) {
+  document.querySelectorAll('.pet-pick-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  _selectedPet = type;
+  const btn = document.getElementById('ob-pet-btn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+// ═══════════════════════════════════════════
 // PHASE ENERGY CARD
 // ═══════════════════════════════════════════
 
@@ -1220,6 +1315,9 @@ function renderToday() {
 
   // Phase energy card
   renderPhaseEnergyCard();
+
+  // Pet companion card
+  renderPetCard();
 
   // week strip
   renderWeekStrip();
@@ -1516,6 +1614,8 @@ function submitCheckin() {
 
   invalidateML();
   evaluateBadges();
+  // Feed the pet — check-ins are worth 15 health
+  feedPet(15);
   saveState();
   renderToday();
   goTo('today', 'left');
@@ -1839,6 +1939,8 @@ function finishWorkout() {
   // Evaluate badges after a short delay so the share card is seen first
   setTimeout(() => evaluateBadges(), 700);
 
+  // Feed the pet — workouts are worth 30 health
+  feedPet(30);
   saveState();
 }
 
@@ -2108,6 +2210,7 @@ window._onAuthStateChanged = async (user) => {
     document.getElementById('screen-auth')?.classList.remove('active');
     document.getElementById('bottom-nav').style.display = 'flex';
     if (!state.phase) advanceCycleDay();
+    decayPetHealth();
     goTo('today');
   } else {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -2643,6 +2746,17 @@ function finishOnboarding() {
   // Boost confidence from period symptoms reported (more data = better baseline)
   if (obPeriodSymptoms.length >= 2) {
     state.cycle.confidence = Math.min(0.85, state.cycle.confidence + 0.1);
+  }
+
+  // Initialise pet companion chosen in step 10
+  if (_selectedPet) {
+    state.pet = {
+      type: _selectedPet,
+      health: 100,
+      lastFedDate: new Date().toISOString().split('T')[0],
+      totalFeeds: 0,
+    };
+    _selectedPet = null;
   }
 
   advanceCycleDay();

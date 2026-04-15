@@ -89,6 +89,8 @@ flex-shrink: 0;
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.92)} }
 @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
 @keyframes floatBubble { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.02)} }
+@keyframes petBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+@keyframes petShiver { 0%,100%{transform:rotate(0deg)} 25%{transform:rotate(-6deg)} 75%{transform:rotate(6deg)} }
 
 /* bottom nav */
 #bottom-nav {
@@ -1234,3 +1236,57 @@ PHASE ENERGY CARD
   line-height: 1.5;
 }
 
+/* ═══════════════════════════════════════════
+   PET COMPANION CARD (Today screen)
+═══════════════════════════════════════════ */
+.pet-card {
+  margin: 0 24px 16px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 16px rgba(46,31,42,.07);
+  animation: fadeUp .4s ease .25s both;
+}
+.pet-card-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--light); margin-bottom: 12px;
+}
+.pet-body { display: flex; align-items: center; gap: 16px; }
+.pet-avatar {
+  font-size: 46px; line-height: 1; flex-shrink: 0;
+  width: 56px; text-align: center; display: block;
+}
+.pet-info { flex: 1; min-width: 0; }
+.pet-name-row {
+  display: flex; align-items: baseline;
+  justify-content: space-between; gap: 6px; margin-bottom: 8px;
+}
+.pet-name { font-size: 17px; font-weight: 700; color: var(--ink); }
+.pet-mood-label { font-size: 11px; color: var(--mid); font-weight: 600; white-space: nowrap; }
+.pet-bar-wrap {
+  height: 8px; background: #F0EAF4; border-radius: 4px;
+  margin-bottom: 7px; overflow: hidden;
+}
+.pet-health-fill {
+  height: 100%; border-radius: 4px;
+  transition: width .8s ease, background .4s ease;
+}
+.pet-hint { font-size: 11px; color: var(--mid); font-weight: 500; line-height: 1.4; }
+
+/* Pet picker grid in onboarding */
+.pet-pick-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-bottom: 28px;
+}
+.pet-pick-btn {
+  padding: 18px 10px; border: 1.5px solid rgba(202,168,186,0.35);
+  border-radius: 20px; background: rgba(255,255,255,0.7);
+  cursor: pointer; text-align: center; transition: all .2s;
+  font-family: 'Nunito', sans-serif;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.ppb-emoji { font-size: 38px; line-height: 1; }
+.ppb-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.ppb-sub { font-size: 10px; color: var(--mid); line-height: 1.3; }
+.pet-pick-btn.selected { border-color: var(--rose-d); background: #FDE8EE; }
+.pet-pick-btn:active { transform: scale(.97); }
