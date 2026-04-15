@@ -1042,11 +1042,36 @@
 <div class="phase-correction-sheet" id="phase-correction-sheet" onclick="if(event.target===this)closePhaseCorrectionSheet()">
   <div class="pcs-card">
     <div class="pcs-handle"></div>
-    <div class="pcs-icon">🌸</div>
-    <div class="pcs-title">Not your period?</div>
-    <div class="pcs-desc">If Bloom has your phase wrong, you can move forward. This will update your cycle model and refresh today's plan.</div>
-    <button class="pcs-btn-primary" onclick="periodEnded()">Period ended — move to follicular →</button>
-    <button class="pcs-btn-cancel" onclick="closePhaseCorrectionSheet()">Keep as menstrual</button>
+    <div class="pcs-title">Where are you in your cycle?</div>
+    <div class="pcs-desc">Tap your current phase and Bloom will adjust your plan.</div>
+
+    <div class="pcs-phase-grid">
+      <button class="pcs-phase-btn pcs-menstrual" onclick="correctToPhase('menstrual')">
+        <span class="pcs-phase-icon">🩸</span>
+        <span class="pcs-phase-name">Menstrual</span>
+        <span class="pcs-phase-sub">Days 1–5</span>
+      </button>
+      <button class="pcs-phase-btn pcs-follicular" onclick="correctToPhase('follicular')">
+        <span class="pcs-phase-icon">🌱</span>
+        <span class="pcs-phase-name">Follicular</span>
+        <span class="pcs-phase-sub">Days 6–13</span>
+      </button>
+      <button class="pcs-phase-btn pcs-ovulatory" onclick="correctToPhase('ovulatory')">
+        <span class="pcs-phase-icon">⚡️</span>
+        <span class="pcs-phase-name">Ovulatory</span>
+        <span class="pcs-phase-sub">Days 14–16</span>
+      </button>
+      <button class="pcs-phase-btn pcs-luteal" onclick="correctToPhase('luteal')">
+        <span class="pcs-phase-icon">🌙</span>
+        <span class="pcs-phase-name">Luteal</span>
+        <span class="pcs-phase-sub">Days 17–28</span>
+      </button>
+    </div>
+
+    <button class="pcs-btn-period" onclick="confirmPeriodStarted()">
+      <span class="pcs-btn-period-icon">🌸</span> My period just started
+    </button>
+    <button class="pcs-btn-cancel" onclick="closePhaseCorrectionSheet()">Cancel</button>
   </div>
 </div>
 

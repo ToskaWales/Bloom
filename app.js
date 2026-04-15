@@ -437,8 +437,8 @@ function getCycleDay() {
   const start = new Date(state.cycle.lastPeriodStart);
   const today = new Date();
   const diffDays = Math.floor((today - start) / MS_PER_DAY);
-  // Wrap around if past full cycle length
-  return (diffDays % (state.cycle.cycleLength || 28)) + 1;
+  // Cap at cycle length — never auto-wrap into menstrual; only recordPeriodStart() can do that
+  return Math.min(diffDays + 1, state.cycle.cycleLength || 28);
 }
 
 // ── Derive phase from cycle day + personal phase lengths ──
@@ -964,25 +964,16 @@ function renderPhaseEnergyCard() {
   document.getElementById('pec-desc').textContent =
     descMap[ml.modifier.action] || phase.chips[0] || '';
 
-  // Make phase chip tappable when in menstrual phase so user can correct it
+  // Whole card is tappable for all phases — opens phase picker sheet
+  card.style.cursor = 'pointer';
+  card.onclick = showPhaseCorrectionSheet;
+  // Remove old chip-level hint if it was added in a previous render
   const phaseChip = document.getElementById('pec-phase-chip');
-  if (state.phase === 'menstrual') {
-    phaseChip.style.cursor = 'pointer';
-    phaseChip.setAttribute('title', 'Not your period? Tap to correct');
-    phaseChip.onclick = showPhaseCorrectionSheet;
-    if (!phaseChip.querySelector('.pec-chip-hint')) {
-      const hint = document.createElement('span');
-      hint.className = 'pec-chip-hint';
-      hint.textContent = ' ·';
-      phaseChip.appendChild(hint);
-    }
-  } else {
-    phaseChip.style.cursor = '';
-    phaseChip.removeAttribute('title');
-    phaseChip.onclick = null;
-    const hint = phaseChip.querySelector('.pec-chip-hint');
-    if (hint) hint.remove();
-  }
+  phaseChip.style.cursor = '';
+  phaseChip.removeAttribute('title');
+  phaseChip.onclick = null;
+  const oldHint = phaseChip.querySelector('.pec-chip-hint');
+  if (oldHint) oldHint.remove();
 
   // SVG orb — size and glow tied to readiness score
   const orbR  = 8 + score * 0.13;     // 8 (score 0) → ~21 (score 100)
@@ -1015,7 +1006,7 @@ function renderPhaseEnergyCard() {
     </svg>`;
 }
 
-// ── Phase correction (user can say "period ended / not my period") ──
+// ── Phase correction — user can set their phase from the energy card ──
 function showPhaseCorrectionSheet() {
   const sheet = document.getElementById('phase-correction-sheet');
   if (sheet) sheet.classList.add('open');
@@ -1024,18 +1015,34 @@ function closePhaseCorrectionSheet() {
   const sheet = document.getElementById('phase-correction-sheet');
   if (sheet) sheet.classList.remove('open');
 }
-function periodEnded() {
-  // Shift lastPeriodStart so today becomes the first follicular day
-  const menstrualLen = (state.cycle && state.cycle.phaseLengths && state.cycle.phaseLengths.menstrual) || 5;
+
+// Set lastPeriodStart so today falls at the midpoint of the chosen phase
+function correctToPhase(phase) {
+  const pl = state.cycle.phaseLengths;
+  const phaseStarts = {
+    menstrual:  1,
+    follicular: pl.menstrual + 1,
+    ovulatory:  pl.menstrual + pl.follicular + 1,
+    luteal:     pl.menstrual + pl.follicular + pl.ovulatory + 1,
+  };
+  const phaseLens = { menstrual: pl.menstrual, follicular: pl.follicular,
+                      ovulatory: pl.ovulatory, luteal: pl.luteal };
+  const targetCycleDay = phaseStarts[phase] + Math.floor(phaseLens[phase] / 2);
   const d = new Date();
-  d.setDate(d.getDate() - (menstrualLen + 1));
+  d.setDate(d.getDate() - (targetCycleDay - 1));
   state.cycle.lastPeriodStart = d.toISOString().split('T')[0];
-  advanceCycleDay();
-  invalidateML();
-  saveState();
+  advanceCycleDay(); invalidateML(); saveState();
+  closePhaseCorrectionSheet(); renderToday();
+  const label = { menstrual:'menstrual', follicular:'follicular', ovulatory:'ovulatory', luteal:'luteal' }[phase];
+  showToast(`✨ Phase updated to ${label}`);
+}
+
+// Called when user confirms period just started from the energy card
+function confirmPeriodStarted() {
+  recordPeriodStart();   // sets cycleDay=1, phase='menstrual', saves state
   closePhaseCorrectionSheet();
   renderToday();
-  showToast('✨ Updated — moving to follicular phase');
+  showToast('🌸 Period logged — Bloom will learn from this');
 }
 
 // ═══════════════════════════════════════════
