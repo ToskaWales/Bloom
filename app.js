@@ -944,6 +944,167 @@ function getBadgeWallHTML() {
 // VIRTUAL PET
 // ═══════════════════════════════════════════
 
+// Returns an illustration-quality inline SVG for the given pet type and health %.
+// All shapes use bezier paths for an organic, app-native look.
+// Drop shadow is applied via CSS (filter: drop-shadow) on the wrapper to avoid
+// SVG filter-id conflicts when multiple pets appear on the same page.
+function getPetSVG(type, healthPct) {
+  const expr = healthPct >= 60 ? 'happy' : healthPct >= 35 ? 'neutral' : 'sad';
+
+  // ── CAT (Luna) — rose tones ──────────────────────────────────────────
+  if (type === 'cat') {
+    const body = `
+      <path d="M22,30 C20,20 22,10 28,8 C30,14 28,24 24,30 Z" fill="#F2A7B4"/>
+      <path d="M58,30 C60,20 58,10 52,8 C50,14 52,24 56,30 Z" fill="#F2A7B4"/>
+      <path d="M23,28 C22,20 23,13 27,11 C28,15 27,23 25,28 Z" fill="#E8849A" opacity="0.55"/>
+      <path d="M57,28 C58,20 57,13 53,11 C52,15 53,23 55,28 Z" fill="#E8849A" opacity="0.55"/>
+      <path d="M40,14 C27,12 14,22 14,38 C14,54 24,63 40,64 C56,63 66,54 66,38 C66,22 53,12 40,14 Z" fill="#F2A7B4"/>
+      <ellipse cx="23" cy="46" rx="6" ry="4" fill="#E8849A" opacity="0.28"/>
+      <ellipse cx="57" cy="46" rx="6" ry="4" fill="#E8849A" opacity="0.28"/>
+      <ellipse cx="40" cy="47" rx="3" ry="2" fill="#E8849A"/>
+      <line x1="14" y1="44" x2="34" y2="46" stroke="#2E1F2A" stroke-width="0.8" opacity="0.18"/>
+      <line x1="14" y1="49" x2="34" y2="48" stroke="#2E1F2A" stroke-width="0.8" opacity="0.18"/>
+      <line x1="46" y1="46" x2="66" y2="44" stroke="#2E1F2A" stroke-width="0.8" opacity="0.18"/>
+      <line x1="46" y1="48" x2="66" y2="49" stroke="#2E1F2A" stroke-width="0.8" opacity="0.18"/>`;
+    const eyes = {
+      happy:
+        `<path d="M28,37 Q33,31 38,37" fill="none" stroke="#2E1F2A" stroke-width="2.5" stroke-linecap="round"/>
+         <path d="M42,37 Q47,31 52,37" fill="none" stroke="#2E1F2A" stroke-width="2.5" stroke-linecap="round"/>`,
+      neutral:
+        `<circle cx="33" cy="36" r="4.5" fill="#2E1F2A"/>
+         <circle cx="47" cy="36" r="4.5" fill="#2E1F2A"/>
+         <circle cx="34.5" cy="34.5" r="1.5" fill="white"/>
+         <circle cx="48.5" cy="34.5" r="1.5" fill="white"/>`,
+      sad:
+        `<circle cx="33" cy="37" r="4.5" fill="#2E1F2A"/>
+         <circle cx="47" cy="37" r="4.5" fill="#2E1F2A"/>
+         <circle cx="34.5" cy="35.5" r="1.5" fill="white"/>
+         <circle cx="48.5" cy="35.5" r="1.5" fill="white"/>
+         <path d="M26,31 Q33,29 37,33" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>
+         <path d="M43,33 Q47,29 54,31" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>
+         <ellipse cx="29" cy="46" rx="1.8" ry="2.8" fill="#C9B8E8" opacity="0.75"/>`,
+    };
+    const mouths = {
+      happy:   `<path d="M34,52 Q40,58 46,52" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>`,
+      neutral: `<line x1="35" y1="52" x2="45" y2="52" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>`,
+      sad:     `<path d="M34,54 Q40,49 46,54" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>`,
+    };
+    return `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">${body}${eyes[expr]}${mouths[expr]}</svg>`;
+  }
+
+  // ── BUNNY (Clover) — lilac tones ─────────────────────────────────────
+  if (type === 'bunny') {
+    const body = `
+      <path d="M28,25 C24,12 23,4 28,2 C33,4 32,12 30,25 Z" fill="#C9B8E8"/>
+      <path d="M52,25 C56,12 57,4 52,2 C47,4 48,12 50,25 Z" fill="#C9B8E8"/>
+      <path d="M28,23 C25,13 24,6 28,4 C32,6 31,13 30,23 Z" fill="#A896D4" opacity="0.45"/>
+      <path d="M52,23 C55,13 56,6 52,4 C48,6 49,13 50,23 Z" fill="#A896D4" opacity="0.45"/>
+      <path d="M40,18 C26,16 13,26 13,42 C13,58 23,66 40,67 C57,66 67,58 67,42 C67,26 54,16 40,18 Z" fill="#C9B8E8"/>
+      <ellipse cx="23" cy="50" rx="6" ry="4" fill="#A896D4" opacity="0.26"/>
+      <ellipse cx="57" cy="50" rx="6" ry="4" fill="#A896D4" opacity="0.26"/>
+      <ellipse cx="40" cy="52" rx="3" ry="2" fill="#A896D4"/>`;
+    const eyes = {
+      happy:
+        `<path d="M29,41 Q34,35 39,41" fill="none" stroke="#2E1F2A" stroke-width="2.5" stroke-linecap="round"/>
+         <path d="M41,41 Q46,35 51,41" fill="none" stroke="#2E1F2A" stroke-width="2.5" stroke-linecap="round"/>`,
+      neutral:
+        `<circle cx="34" cy="40" r="4.5" fill="#2E1F2A"/>
+         <circle cx="46" cy="40" r="4.5" fill="#2E1F2A"/>
+         <circle cx="35.5" cy="38.5" r="1.5" fill="white"/>
+         <circle cx="47.5" cy="38.5" r="1.5" fill="white"/>`,
+      sad:
+        `<circle cx="34" cy="41" r="4.5" fill="#2E1F2A"/>
+         <circle cx="46" cy="41" r="4.5" fill="#2E1F2A"/>
+         <circle cx="35.5" cy="39.5" r="1.5" fill="white"/>
+         <circle cx="47.5" cy="39.5" r="1.5" fill="white"/>
+         <path d="M27,35 Q34,33 38,37" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>
+         <path d="M42,37 Q46,33 53,35" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>
+         <ellipse cx="30" cy="50" rx="1.8" ry="2.8" fill="#C9B8E8" opacity="0.7"/>`,
+    };
+    const mouths = {
+      happy:   `<path d="M35,57 Q40,63 45,57" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>`,
+      neutral: `<line x1="36" y1="57" x2="44" y2="57" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>`,
+      sad:     `<path d="M35,59 Q40,54 45,59" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>`,
+    };
+    return `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">${body}${eyes[expr]}${mouths[expr]}</svg>`;
+  }
+
+  // ── DOG (Poppy) — peach tones ─────────────────────────────────────────
+  if (type === 'dog') {
+    const body = `
+      <path d="M17,34 C9,40 7,56 11,64 C16,70 23,65 25,56 C27,47 22,38 18,34 Z" fill="#F0A873"/>
+      <path d="M63,34 C71,40 73,56 69,64 C64,70 57,65 55,56 C53,47 58,38 62,34 Z" fill="#F0A873"/>
+      <path d="M40,14 C25,12 12,22 12,40 C12,58 22,68 40,70 C58,68 68,58 68,40 C68,22 55,12 40,14 Z" fill="#F9C9A3"/>
+      <path d="M40,50 C31,48 26,54 27,60 C28,66 33,70 40,71 C47,70 52,66 53,60 C54,54 49,48 40,50 Z" fill="#F0A873" opacity="0.5"/>
+      <ellipse cx="21" cy="46" rx="6.5" ry="4.5" fill="#F0A873" opacity="0.38"/>
+      <ellipse cx="59" cy="46" rx="6.5" ry="4.5" fill="#F0A873" opacity="0.38"/>
+      <ellipse cx="40" cy="52" rx="5.5" ry="4" fill="#2E1F2A"/>
+      <ellipse cx="38.5" cy="50.5" rx="1.5" ry="1" fill="white" opacity="0.6"/>`;
+    const eyes = {
+      happy:
+        `<path d="M26,36 Q32,30 38,36" fill="none" stroke="#2E1F2A" stroke-width="2.5" stroke-linecap="round"/>
+         <path d="M42,36 Q48,30 54,36" fill="none" stroke="#2E1F2A" stroke-width="2.5" stroke-linecap="round"/>`,
+      neutral:
+        `<circle cx="32" cy="35" r="5" fill="#2E1F2A"/>
+         <circle cx="48" cy="35" r="5" fill="#2E1F2A"/>
+         <circle cx="33.5" cy="33.5" r="1.8" fill="white"/>
+         <circle cx="49.5" cy="33.5" r="1.8" fill="white"/>`,
+      sad:
+        `<circle cx="32" cy="36" r="5" fill="#2E1F2A"/>
+         <circle cx="48" cy="36" r="5" fill="#2E1F2A"/>
+         <circle cx="33.5" cy="34.5" r="1.8" fill="white"/>
+         <circle cx="49.5" cy="34.5" r="1.8" fill="white"/>
+         <path d="M24,29 Q32,27 37,32" fill="none" stroke="#2E1F2A" stroke-width="2" stroke-linecap="round"/>
+         <path d="M43,32 Q48,27 56,29" fill="none" stroke="#2E1F2A" stroke-width="2" stroke-linecap="round"/>
+         <ellipse cx="27" cy="47" rx="1.8" ry="2.8" fill="#C9B8E8" opacity="0.7"/>`,
+    };
+    const mouths = {
+      happy:
+        `<path d="M32,59 Q40,66 48,59" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>
+         <ellipse cx="40" cy="64" rx="5" ry="4" fill="#E8849A"/>`,
+      neutral: `<line x1="34" y1="59" x2="46" y2="59" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>`,
+      sad:     `<path d="M32,61 Q40,55 48,61" fill="none" stroke="#2E1F2A" stroke-width="1.8" stroke-linecap="round"/>`,
+    };
+    return `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">${body}${eyes[expr]}${mouths[expr]}</svg>`;
+  }
+
+  // ── FLOWER (Bloom) — rose tones, matches app icon ──────────────────────
+  const petalBase = `M40,40 C37,30 37,16 40,12 C43,16 43,30 40,40 Z`;
+  const petalSm   = `M40,40 C38.5,33 38.5,21 40,18 C41.5,21 41.5,33 40,40 Z`;
+  const petals  = [0,72,144,216,288].map(r =>
+    `<g transform="rotate(${r} 40 40)"><path d="${petalBase}" fill="#F2A7B4"/></g>`).join('');
+  const petals2 = [36,108,180,252,324].map(r =>
+    `<g transform="rotate(${r} 40 40)"><path d="${petalSm}" fill="#E8849A" opacity="0.42"/></g>`).join('');
+  const flowerBody = `
+    ${petals}${petals2}
+    <circle cx="40" cy="40" r="19" fill="#F9C9A3"/>
+    <circle cx="40" cy="40" r="19" fill="none" stroke="#E8849A" stroke-width="1" opacity="0.32"/>
+    <circle cx="40" cy="44" r="1.8" fill="#E8849A"/>`;
+  const flowerEyes = {
+    happy:
+      `<path d="M32,38 Q36,33 40,38" fill="none" stroke="#2E1F2A" stroke-width="2" stroke-linecap="round"/>
+       <path d="M40,38 Q44,33 48,38" fill="none" stroke="#2E1F2A" stroke-width="2" stroke-linecap="round"/>`,
+    neutral:
+      `<circle cx="35" cy="37" r="3.5" fill="#2E1F2A"/>
+       <circle cx="45" cy="37" r="3.5" fill="#2E1F2A"/>
+       <circle cx="36" cy="35.5" r="1" fill="white"/>
+       <circle cx="46" cy="35.5" r="1" fill="white"/>`,
+    sad:
+      `<circle cx="35" cy="38" r="3.5" fill="#2E1F2A"/>
+       <circle cx="45" cy="38" r="3.5" fill="#2E1F2A"/>
+       <circle cx="36" cy="36.5" r="1" fill="white"/>
+       <circle cx="46" cy="36.5" r="1" fill="white"/>
+       <path d="M30,33 Q35,31 38,35" fill="none" stroke="#2E1F2A" stroke-width="1.5" stroke-linecap="round"/>
+       <path d="M42,35 Q45,31 50,33" fill="none" stroke="#2E1F2A" stroke-width="1.5" stroke-linecap="round"/>`,
+  };
+  const flowerMouths = {
+    happy:   `<path d="M35,48 Q40,53 45,48" fill="none" stroke="#2E1F2A" stroke-width="1.5" stroke-linecap="round"/>`,
+    neutral: `<line x1="36" y1="48" x2="44" y2="48" stroke="#2E1F2A" stroke-width="1.5" stroke-linecap="round"/>`,
+    sad:     `<path d="M35,50 Q40,45 45,50" fill="none" stroke="#2E1F2A" stroke-width="1.5" stroke-linecap="round"/>`,
+  };
+  return `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">${flowerBody}${flowerEyes[expr]}${flowerMouths[expr]}</svg>`;
+}
+
 function getPetData() {
   if (!state.pet || !state.pet.type) return null;
   const def = PET_TYPES[state.pet.type] || PET_TYPES.cat;
@@ -996,16 +1157,16 @@ function renderPetCard() {
 
   const pd = getPetData();
 
-  // No pet yet — show inline picker so existing users can adopt one
+  // No pet yet — show inline SVG picker so existing users can adopt one
   if (!pd) {
     card.innerHTML = `
       <div class="pet-card-label">YOUR COMPANION</div>
-      <div style="font-size:13px;color:var(--ink);font-weight:600;margin-bottom:4px">Pick a companion 🐾</div>
+      <div style="font-size:13px;color:var(--ink);font-weight:600;margin-bottom:4px">Pick a companion</div>
       <div style="font-size:11px;color:var(--mid);margin-bottom:14px">They thrive on your workouts & check-ins!</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
         ${Object.entries(PET_TYPES).map(([key, p]) => `
           <button onclick="adoptPet('${key}')" style="background:#F7F2FA;border:1.5px solid rgba(202,168,186,0.3);border-radius:14px;padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-family:'Nunito',sans-serif;transition:all .2s">
-            <span style="font-size:28px;line-height:1">${p.emoji}</span>
+            <div style="width:52px;height:52px;filter:drop-shadow(0 1px 2px rgba(46,31,42,0.12))">${getPetSVG(key, 100)}</div>
             <span style="font-size:10px;font-weight:700;color:var(--ink)">${p.name}</span>
           </button>`).join('')}
       </div>`;
@@ -1031,10 +1192,10 @@ function renderPetCard() {
       </div>`;
   }
 
-  document.getElementById('pet-avatar').textContent      = pd.emoji;
-  document.getElementById('pet-name').textContent        = pd.def.name;
-  document.getElementById('pet-mood-label').textContent  = pd.mood;
-  document.getElementById('pet-hint').textContent        = pd.hint;
+  document.getElementById('pet-avatar').innerHTML     = getPetSVG(state.pet.type, pd.health);
+  document.getElementById('pet-name').textContent     = pd.def.name;
+  document.getElementById('pet-mood-label').textContent = pd.mood;
+  document.getElementById('pet-hint').textContent     = pd.hint;
 
   const fill = document.getElementById('pet-health-fill');
   fill.style.width      = pd.health + '%';
@@ -1060,7 +1221,7 @@ function adoptPet(type) {
   saveState();
   renderPetCard();
   const name = (PET_TYPES[type] || PET_TYPES.cat).name;
-  showToast(`${PET_TYPES[type].emoji} ${name} is now your companion!`);
+  showToast(`🐾 ${name} is now your companion!`);
 }
 
 let _selectedPet = null;
@@ -2624,6 +2785,13 @@ function obNext(step) {
   if (step === 3) {
     const n = document.getElementById('name-input').value.trim();
     if (n) state.name = n;
+  }
+  // Populate SVG pet illustrations when reaching the pet picker step
+  if (step === 10) {
+    document.querySelectorAll('.pet-pick-btn[data-pet-type]').forEach(btn => {
+      const d = btn.querySelector('.ppb-emoji');
+      if (d) d.innerHTML = getPetSVG(btn.dataset.petType, 100);
+    });
   }
   // Hide all steps and clear any leftover inline animation overrides
   document.querySelectorAll('.ob-step').forEach(s => {
