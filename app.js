@@ -330,72 +330,72 @@ const SESSION_META = {
 };
 
 // ── WORKOUT SPLITS — female aesthetics focus ──────────────────────────────
-// Each split distributes the exercise bank optimally across N days.
-// Priority: Glutes > Quads/Hamstrings > Back/Shoulders > Chest > Arms/Core
+// Priority: Glutes > Legs (Quads + Hamstrings) > Back > Core/Abs > Shoulders > Arms
+// Chest is treated as minor accessory only. Every day includes core work.
 const WORKOUT_SPLITS = {
   2: {
-    name: '2-Day Split', focus: 'Full Body × 2', emoji: '⚡',
+    name: '2-Day Split', focus: 'Glutes · Legs · Back', emoji: '🍑',
     days: [
-      { name: 'Lower Body', emoji: '🍑', tag: 'Glutes · Quads · Hamstrings · Core',
-        exercises: ['barbell_hip_thrust','barbell_squat','rdl','leg_curl_seated','cable_kickback','calf_raise','cable_crunch'] },
-      { name: 'Upper Body', emoji: '💪', tag: 'Back · Chest · Shoulders · Arms',
-        exercises: ['lat_pulldown','incline_db_press','db_row','db_shoulder_press','lateral_raise','db_bicep_curl','tricep_pushdown'] },
+      { name: 'Glutes & Legs', emoji: '🍑', tag: 'Hip Thrust · Squat · RDL · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','rdl','leg_curl_seated','cable_kickback','ab_wheel','cable_crunch'] },
+      { name: 'Back & Hamstrings', emoji: '🏹', tag: 'Row · Pulldown · RDL · Abs · Calves',
+        exercises: ['barbell_row','lat_pulldown','db_row','face_pull','leg_curl_lying','plank','calf_raise'] },
     ]
   },
   3: {
-    name: '3-Day Split', focus: 'Glutes · Upper · Hamstrings', emoji: '🌸',
+    name: '3-Day Split', focus: 'Glutes · Back · Legs', emoji: '🌸',
     days: [
-      { name: 'Glutes & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Bulgarian · Kickback',
-        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','cable_kickback','leg_extension','ab_wheel'] },
-      { name: 'Upper Body', emoji: '💪', tag: 'Back · Chest · Shoulders · Arms',
-        exercises: ['lat_pulldown','incline_db_press','db_row','db_shoulder_press','lateral_raise','db_bicep_curl','tricep_pushdown'] },
-      { name: 'Hamstrings & Glutes', emoji: '🔄', tag: 'RDL · Leg Curl · Hip Thrust · Calves',
-        exercises: ['rdl','leg_curl_lying','db_hip_thrust','nordic_curl','calf_raise','cable_crunch'] },
+      { name: 'Glutes & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Bulgarian · Kickback · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','cable_kickback','leg_extension','ab_wheel','cable_crunch'] },
+      { name: 'Back & Core', emoji: '🏹', tag: 'Row · Pulldown · Chin-Up · Face Pull · Abs',
+        exercises: ['barbell_row','lat_pulldown','db_row','seated_cable_row','face_pull','ab_crunch_machine','plank'] },
+      { name: 'Hamstrings & Glutes', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Hip Thrust · Abs',
+        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','cable_crunch','calf_raise'] },
     ]
   },
   4: {
-    name: '4-Day Split', focus: 'Upper · Lower × 2', emoji: '💜',
+    name: '4-Day Split', focus: 'Glutes · Back · Legs · Core', emoji: '💜',
     days: [
-      { name: 'Glutes & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Leg Press',
-        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','leg_press','cable_kickback','leg_extension'] },
-      { name: 'Push + Core', emoji: '🏋️', tag: 'Chest · Shoulders · Triceps · Core',
-        exercises: ['incline_db_press','barbell_ohp','lateral_raise','cable_chest_fly','tricep_pushdown','overhead_tricep','cable_crunch'] },
-      { name: 'Hamstrings & Glutes', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Calves',
-        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','calf_raise'] },
-      { name: 'Pull + Shoulders', emoji: '⬇️', tag: 'Back · Biceps · Rear Delts',
-        exercises: ['barbell_row','lat_pulldown','seated_cable_row','db_row','barbell_curl','db_bicep_curl','cable_lateral'] },
+      { name: 'Glutes A & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Leg Press · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','leg_press','cable_kickback','ab_wheel','cable_crunch'] },
+      { name: 'Back A & Core', emoji: '🏹', tag: 'Row · Pulldown · Chin-Up · Face Pull · Abs',
+        exercises: ['barbell_row','lat_pulldown','chin_up','seated_cable_row','face_pull','ab_crunch_machine','plank'] },
+      { name: 'Hamstrings & Glutes B', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Hip Thrust · Abs',
+        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','cable_crunch','calf_raise'] },
+      { name: 'Back B & Legs', emoji: '⬇️', tag: 'Row · Pullover · Hack Squat · Lunge · Abs',
+        exercises: ['db_row','pullover','hack_squat','walking_lunge','leg_extension','ab_wheel','plank'] },
     ]
   },
   5: {
-    name: '5-Day Split', focus: 'Aesthetic PPL + Glutes', emoji: '🌟',
+    name: '5-Day Split', focus: 'Glutes · Back · Legs · Abs', emoji: '🌟',
     days: [
-      { name: 'Glutes & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Leg Press',
-        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','leg_press','cable_kickback','leg_extension'] },
-      { name: 'Push', emoji: '🏋️', tag: 'Chest · Shoulders · Triceps',
-        exercises: ['incline_db_press','barbell_ohp','db_shoulder_press','lateral_raise','cable_chest_fly','tricep_pushdown','overhead_tricep'] },
-      { name: 'Hamstrings & Glutes', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Lunge',
-        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','walking_lunge'] },
-      { name: 'Pull', emoji: '⬇️', tag: 'Back · Biceps',
-        exercises: ['barbell_row','lat_pulldown','seated_cable_row','chin_up','db_row','barbell_curl','hammer_curl'] },
-      { name: 'Toning & Core', emoji: '✨', tag: 'Shoulders · Arms · Core · Calves',
-        exercises: ['lateral_raise','cable_lateral','ab_wheel','cable_crunch','calf_raise','db_bicep_curl','tricep_pushdown','plank'] },
+      { name: 'Glutes A & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Leg Press · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','leg_press','cable_kickback','leg_extension','cable_crunch'] },
+      { name: 'Back A & Core', emoji: '🏹', tag: 'Row · Pulldown · Chin-Up · Face Pull · Abs',
+        exercises: ['barbell_row','lat_pulldown','chin_up','db_row','face_pull','ab_wheel','plank'] },
+      { name: 'Hamstrings & Glutes B', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Lunge · Abs',
+        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','walking_lunge','cable_crunch'] },
+      { name: 'Back B & Abs', emoji: '⬇️', tag: 'Row · Pullover · Seated Row · Abs · Calves',
+        exercises: ['db_row','seated_cable_row','pullover','ab_crunch_machine','ab_wheel','cable_crunch','calf_raise'] },
+      { name: 'Legs & Core', emoji: '🦵', tag: 'Hack Squat · Goblet · Leg Curl · Abs · Calves',
+        exercises: ['hack_squat','goblet_squat','leg_curl_seated','cable_kickback','plank','ab_wheel','calf_raise'] },
     ]
   },
   6: {
-    name: '6-Day Split', focus: 'Full Aesthetic', emoji: '🏆',
+    name: '6-Day Split', focus: 'Glutes · Back · Legs · Abs', emoji: '🏆',
     days: [
-      { name: 'Glutes A + Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Bulgarian',
-        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','cable_kickback','leg_extension'] },
-      { name: 'Push', emoji: '💪', tag: 'Chest · Shoulders · Triceps',
-        exercises: ['barbell_bench','incline_db_press','barbell_ohp','lateral_raise','tricep_pushdown','overhead_tricep'] },
-      { name: 'Glutes B + Hamstrings', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl',
-        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl'] },
-      { name: 'Pull', emoji: '⬇️', tag: 'Back · Biceps',
-        exercises: ['barbell_row','lat_pulldown','chin_up','db_row','barbell_curl','hammer_curl'] },
-      { name: 'Legs B + Core', emoji: '🦵', tag: 'Quads · Calves · Core',
-        exercises: ['hack_squat','leg_press','goblet_squat','calf_raise','cable_crunch','ab_wheel','plank'] },
-      { name: 'Shoulders & Arms', emoji: '✨', tag: 'Delts · Biceps · Triceps',
-        exercises: ['db_shoulder_press','lateral_raise','cable_lateral','barbell_curl','db_bicep_curl','tricep_dip','tricep_pushdown'] },
+      { name: 'Glutes A & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Bulgarian · Kickback · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','cable_kickback','leg_extension','cable_crunch'] },
+      { name: 'Back A & Core', emoji: '🏹', tag: 'Row · Pulldown · Chin-Up · Face Pull · Abs',
+        exercises: ['barbell_row','lat_pulldown','chin_up','face_pull','ab_wheel','plank'] },
+      { name: 'Hamstrings & Glutes B', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Hip Thrust',
+        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','cable_crunch'] },
+      { name: 'Back B & Abs', emoji: '⬇️', tag: 'DB Row · Seated Row · Pullover · Abs',
+        exercises: ['db_row','seated_cable_row','pullover','ab_crunch_machine','ab_wheel','calf_raise'] },
+      { name: 'Legs & Core', emoji: '🦵', tag: 'Hack Squat · Leg Press · Goblet · Lunge · Abs',
+        exercises: ['hack_squat','leg_press','goblet_squat','walking_lunge','plank','cable_crunch'] },
+      { name: 'Glutes C & Abs', emoji: '✨', tag: 'DB Hip Thrust · DB RDL · Kickback · Abs · Calves',
+        exercises: ['db_hip_thrust','db_rdl','cable_kickback','leg_curl_seated','ab_crunch_machine','ab_wheel','calf_raise'] },
     ]
   },
 };
