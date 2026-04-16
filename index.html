@@ -1056,29 +1056,60 @@
   <div class="cw-header">
     <button class="aw-back" onclick="closeCustomWorkout()">✕</button>
     <div class="cw-title">Build Your Workout</div>
-    <div class="cw-subtitle">Adapted to your phase & history</div>
+    <div class="cw-subtitle">Adapted to your phase &amp; history</div>
   </div>
-  <div class="cw-body">
-    <div class="cw-section-title">YOUR PLAN <span id="cw-count">(0)</span></div>
-    <div id="cw-selected-list" class="cw-selected-list"></div>
 
-    <div class="cw-section-title" style="margin-top:18px">ADD EXERCISES</div>
-    <div class="insight-chips" id="cw-muscle-filter" style="margin-bottom:12px">
-      <div class="i-chip active" onclick="filterCWExercises('all',this)">All</div>
-      <div class="i-chip" onclick="filterCWExercises('quads',this)">Quads</div>
-      <div class="i-chip" onclick="filterCWExercises('glutes',this)">Glutes</div>
-      <div class="i-chip" onclick="filterCWExercises('hamstring',this)">Hamstrings</div>
-      <div class="i-chip" onclick="filterCWExercises('back',this)">Back</div>
-      <div class="i-chip" onclick="filterCWExercises('chest',this)">Chest</div>
-      <div class="i-chip" onclick="filterCWExercises('shoulders',this)">Shoulders</div>
-      <div class="i-chip" onclick="filterCWExercises('core',this)">Core</div>
-      <div class="i-chip" onclick="filterCWExercises('biceps',this)">Biceps</div>
-      <div class="i-chip" onclick="filterCWExercises('triceps',this)">Triceps</div>
-    </div>
-    <div id="cw-exercise-list" class="cw-exercise-list"></div>
+  <!-- Tabs -->
+  <div class="cw-tabs" style="background:linear-gradient(135deg,var(--lilac),var(--rose))">
+    <button class="cw-tab active" id="cw-tab-splits" onclick="openCWTab('splits')">Splits</button>
+    <button class="cw-tab" id="cw-tab-custom" onclick="openCWTab('custom')">Custom</button>
   </div>
-  <div class="cw-footer">
-    <button class="btn-primary" id="cw-start-btn" onclick="startCustomWorkout()" disabled>Start workout 💪</button>
+
+  <!-- SPLITS PANEL -->
+  <div id="cw-panel-splits" class="cw-panel">
+    <div class="cw-body">
+      <div class="cw-section-title">DAYS PER WEEK</div>
+      <div class="split-day-selector" id="split-day-selector">
+        <button class="split-day-btn" onclick="selectSplitDayCount(2)">2</button>
+        <button class="split-day-btn" onclick="selectSplitDayCount(3)">3</button>
+        <button class="split-day-btn active" onclick="selectSplitDayCount(4)">4</button>
+        <button class="split-day-btn" onclick="selectSplitDayCount(5)">5</button>
+        <button class="split-day-btn" onclick="selectSplitDayCount(6)">6</button>
+      </div>
+      <span class="split-focus-badge" id="split-focus-badge"></span>
+      <div id="split-cards-container" class="split-cards-container"></div>
+    </div>
+  </div>
+
+  <!-- CUSTOM PANEL -->
+  <div id="cw-panel-custom" class="cw-panel" style="display:none">
+    <div class="cw-day-tabs-row" id="cw-day-tabs-row"></div>
+    <div class="cw-body">
+      <div class="cw-section-title">YOUR PLAN <span id="cw-count">(0)</span></div>
+      <div id="cw-selected-list" class="cw-selected-list"></div>
+
+      <div class="cw-section-title" style="margin-top:8px">ADD EXERCISES</div>
+      <div class="cw-filter-row" id="cw-muscle-filter">
+        <div class="i-chip active" onclick="filterCWExercises('all',this)">All</div>
+        <div class="i-chip" onclick="filterCWExercises('quads',this)">Quads</div>
+        <div class="i-chip" onclick="filterCWExercises('glutes',this)">Glutes</div>
+        <div class="i-chip" onclick="filterCWExercises('hamstring',this)">Hamstrings</div>
+        <div class="i-chip" onclick="filterCWExercises('back',this)">Back</div>
+        <div class="i-chip" onclick="filterCWExercises('chest',this)">Chest</div>
+        <div class="i-chip" onclick="filterCWExercises('shoulders',this)">Shoulders</div>
+        <div class="i-chip" onclick="filterCWExercises('core',this)">Core</div>
+        <div class="i-chip" onclick="filterCWExercises('biceps',this)">Biceps</div>
+        <div class="i-chip" onclick="filterCWExercises('triceps',this)">Triceps</div>
+      </div>
+      <div id="cw-exercise-list" class="cw-exercise-list"></div>
+    </div>
+    <div class="cw-footer">
+      <div class="cw-day-actions">
+        <button class="cw-day-action-btn" onclick="addCustomDay()">+ Add Day</button>
+        <button class="cw-day-action-btn" id="cw-remove-day-btn" onclick="removeCustomDay()" style="display:none">− Remove Day</button>
+      </div>
+      <button class="btn-primary" id="cw-start-btn" onclick="startCustomWorkout()" disabled>Start Day 💪</button>
+    </div>
   </div>
 </div>
 

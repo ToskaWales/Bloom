@@ -597,7 +597,38 @@ position: relative; overflow: hidden;
 .cw-header .aw-back { position: absolute; top: 16px; right: 16px; }
 .cw-title { font-family: ‘Playfair Display’, serif; font-size: 22px; color: white; font-weight: 600; margin-top: 4px; }
 .cw-subtitle { font-size: 12px; color: rgba(255,255,255,.75); font-weight: 600; margin-top: 3px; }
-.cw-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Tabs */
+.cw-tabs { display: flex; background: rgba(255,255,255,.12); border-bottom: 1px solid rgba(255,255,255,.18); flex-shrink: 0; }
+.cw-tab { flex: 1; padding: 11px; text-align: center; font-size: 13px; font-weight: 700; color: rgba(255,255,255,.55); cursor: pointer; transition: all .2s; font-family: ‘Nunito’, sans-serif; background: none; border: none; border-bottom: 2.5px solid transparent; }
+.cw-tab.active { color: white; border-bottom-color: white; }
+
+/* Panel */
+.cw-panel { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+/* Splits panel */
+.split-day-selector { display: flex; gap: 8px; margin-bottom: 14px; }
+.split-day-btn { flex: 1; padding: 10px 2px; border-radius: 12px; border: 1.5px solid rgba(202,168,186,.35); background: white; font-size: 14px; font-weight: 800; color: var(--mid); cursor: pointer; transition: all .2s; font-family: ‘Nunito’, sans-serif; }
+.split-day-btn.active { background: var(--rose); border-color: var(--rose); color: white; }
+.split-focus-badge { font-size: 11px; font-weight: 700; color: var(--mid); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; display: block; }
+.split-cards-container { display: flex; flex-direction: column; gap: 12px; }
+.split-day-card { background: white; border-radius: 18px; padding: 16px; box-shadow: 0 2px 12px rgba(46,31,42,.07); }
+.split-card-num { font-size: 10px; font-weight: 800; color: var(--rose); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 3px; }
+.split-card-name { font-size: 16px; font-weight: 700; color: var(--ink); font-family: ‘Playfair Display’, serif; line-height: 1.2; }
+.split-card-tag { font-size: 11px; color: var(--mid); margin-top: 3px; margin-bottom: 10px; }
+.split-card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.split-ex-pill { font-size: 11px; background: var(--mist); border-radius: 100px; padding: 4px 10px; color: var(--mid); font-weight: 600; }
+.split-more-pill { font-size: 11px; color: var(--light); padding: 4px 8px; font-weight: 600; }
+.split-start-btn { width: 100%; padding: 11px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--rose), var(--lilac-d)); color: white; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity .2s; font-family: ‘Nunito’, sans-serif; }
+.split-start-btn:active { opacity: .85; }
+
+/* Custom day tabs row */
+.cw-day-tabs-row { display: flex; gap: 8px; padding: 10px 20px 0; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+.cw-day-tabs-row::-webkit-scrollbar { display: none; }
+.cw-day-tab { flex-shrink: 0; padding: 6px 16px; border-radius: 100px; border: 1.5px solid rgba(202,168,186,.35); background: white; font-size: 12px; font-weight: 700; color: var(--mid); cursor: pointer; transition: all .2s; font-family: ‘Nunito’, sans-serif; }
+.cw-day-tab.active { background: var(--rose); border-color: var(--rose); color: white; }
+
+.cw-body { flex: 1; overflow-y: auto; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 10px; }
 .cw-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--light); }
 .cw-selected-list, .cw-exercise-list { display: flex; flex-direction: column; gap: 8px; }
 .cw-empty { font-size: 13px; color: var(--mid); text-align: center; padding: 14px; background: var(--mist); border-radius: 14px; }
@@ -611,7 +642,17 @@ position: relative; overflow: hidden;
 .cw-add-btn.add { background: linear-gradient(135deg, var(--rose), var(--lilac-d)); color: white; }
 .cw-add-btn.remove { background: var(--mist); color: var(--mid); }
 .cw-remove-btn { background: var(--mist); color: var(--mid); font-size: 16px; }
-.cw-footer { padding: 16px 24px 24px; }
+
+/* Filter chips row — padding prevents overflow-y:hidden clipping on mobile */
+.cw-filter-row { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.cw-filter-row::-webkit-scrollbar { display: none; }
+
+/* Day action buttons */
+.cw-day-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+.cw-day-action-btn { flex: 1; padding: 10px; border-radius: 12px; border: 1.5px dashed rgba(202,168,186,.5); background: transparent; font-size: 13px; font-weight: 700; color: var(--rose); cursor: pointer; transition: all .2s; font-family: ‘Nunito’, sans-serif; }
+.cw-day-action-btn:active { background: rgba(242,167,180,.1); }
+
+.cw-footer { padding: 12px 20px 24px; flex-shrink: 0; }
 
 /* ═══════════════════════════════════════════
 PROGRESS SCREEN.
