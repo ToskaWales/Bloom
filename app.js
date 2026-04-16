@@ -3092,26 +3092,54 @@ function resetOnboarding() {
   obNext(1);
 }
 
-function resetAccount() {
-  if (!confirm('This will permanently delete ALL your data including workout history and cycle tracking. This cannot be undone. Are you sure?')) return;
+async function resetAccount() {
+  if (!confirm('This will permanently delete ALL your data — workout history, cycle tracking, progress, badges, everything. This cannot be undone.\n\nAre you absolutely sure?')) return;
+  if (!confirm('Last chance. Delete everything and start fresh?')) return;
+
   closeAccount();
-  localStorage.removeItem('bloom_state');
-  localStorage.removeItem('bloom_onboarding_done');
-  localStorage.removeItem('bloomProgressPhotos');
-  onboardingCompleted = false;
-  daysUntilNextPeriod = null;
-  obPeriodSymptoms = [];
+  showToast('Deleting all data…');
+
+  // 1. Wipe Firestore document (prevents cloud data from reloading on next sign-in)
+  if (currentUser && window._fbClearState) {
+    try { await window._fbClearState(currentUser.uid); } catch(e) { console.warn('Firestore clear failed', e); }
+  }
+
+  // 2. Sign out so the wiped cloud state isn't re-saved under this session
+  if (currentUser && window._fbSignOut) {
+    try { await window._fbSignOut(); } catch(e) {}
+  }
+
+  // 3. Nuke ALL localStorage — no partial cleanup
+  localStorage.clear();
+
+  // 4. Reset every property on the state object to factory defaults
+  Object.keys(state).forEach(k => delete state[k]);
   Object.assign(state, {
     name: 'Sofia', goals: ['strength'], level: 1, mood: 3, energy: 6,
     symptoms: [], workoutsCompleted: 0, streak: 0, listenedToBody: 0,
     totalMins: 0, moodHistory: [], checkinDone: false, phase: null,
+    weekSchedule: null, weekScheduleWeek: null, weekCompletions: {},
+    badges: [], prHistory: [], pet: null,
+    exerciseHistory: {}, muscleLog: {},
+    focusMuscles: [], trainingDaysPerWeek: 3,
+    sessionDurationMins: 45, durationScale: 1,
+    lastWorkoutExercises: [],
     cycle: getDefaultCycle(),
   });
+
+  // 5. Clear all in-memory caches
+  invalidateML();
+  currentUser = null;
+  onboardingCompleted = false;
+  daysUntilNextPeriod = null;
+  obPeriodSymptoms = [];
+
+  // 6. Back to onboarding
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('bottom-nav').style.display = 'none';
   document.getElementById('screen-onboarding').classList.add('active');
   obNext(1);
-  showToast('Account reset. Starting fresh.');
+  showToast('All data deleted. Starting fresh.');
 }
 
 // ── Offline fallback ──

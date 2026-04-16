@@ -1281,6 +1281,10 @@
       const snap = await getDoc(doc(db, 'users', uid));
       return snap.exists() ? snap.data() : null;
     };
+    window._fbClearState = async (uid) => {
+      // Overwrite the entire document — no merge — so all data is gone
+      await setDoc(doc(db, 'users', uid), { state: null, clearedAt: serverTimestamp() });
+    };
 
     // By the time this module runs, window._onAuthStateChanged is guaranteed
     // to exist because the main script has already finished executing.
