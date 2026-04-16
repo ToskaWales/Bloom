@@ -574,6 +574,8 @@
   <div class="start-wrap">
     <button class="btn-primary" onclick="startActiveWorkout()" id="start-workout-btn">Begin workout 💪</button>
     <div style="height:10px"></div>
+    <button class="btn-soft" onclick="openCustomWorkout()">✏️ Build custom workout</button>
+    <div style="height:10px"></div>
     <button class="btn-soft" onclick="goTo('today')">← Back to today</button>
   </div>
   <div style="height:16px"></div>
@@ -1004,49 +1006,79 @@
   <span class="aw-cue-text" id="aw-cue-text">Loading coaching cue...</span>
 </div>
 
-<!-- set + load tracker -->
+<!-- per-set tracker: vertical rows with individual weight + reps -->
 <div class="set-tracker">
-  <div class="st-header">
-    <div class="st-title">Sets</div>
-    <div class="st-load-wrap">
-      <button class="st-load-btn" onclick="adjustLoad(-2.5)">−</button>
-      <div class="st-load-display">
-        <span class="st-load-val" id="st-load-val">60</span>
-        <span class="st-load-unit">kg</span>
-      </div>
-      <button class="st-load-btn" onclick="adjustLoad(2.5)">+</button>
-    </div>
+  <div class="st-header-row">
+    <div class="st-col-num">SET</div>
+    <div class="st-col-inputs">WEIGHT &nbsp;×&nbsp; REPS</div>
+    <div class="st-col-done"></div>
   </div>
-  <div class="set-circles" id="set-circles"></div>
+  <div id="sets-list"></div>
   <div class="st-load-note" id="st-load-note"></div>
-</div>
-
-<!-- rest timer with presets -->
-<div class="aw-timer-card">
-  <div class="aw-timer" id="aw-timer">00:00</div>
-  <div class="aw-timer-label" id="aw-timer-label">Rest timer</div>
-  <div class="rest-presets">
-    <button class="rest-preset" onclick="setRestTimer(60)">1:00</button>
-    <button class="rest-preset" onclick="setRestTimer(90)">1:30</button>
-    <button class="rest-preset active" onclick="setRestTimer(120)">2:00</button>
-    <button class="rest-preset" onclick="setRestTimer(180)">3:00</button>
-  </div>
-  <div class="aw-timer-btns">
-    <button class="aw-timer-btn start" onclick="toggleTimer()" id="timer-btn">▶ Start rest</button>
-    <button class="aw-timer-btn reset" onclick="resetTimer()">↺ Reset</button>
-  </div>
 </div>
 
 <!-- RPE -->
 <div class="rpe-slider">
   <div class="st-title">How hard was that?</div>
   <div class="rpe-scale" id="rpe-scale"></div>
-  <div class="rpe-value" id="rpe-value">RPE 6 · Challenging</div>
+  <div class="rpe-value" id="rpe-value">RPE — tap to rate</div>
 </div>
 
   </div>
   <div class="aw-footer">
     <button class="btn-primary" onclick="nextExercise()" id="next-ex-btn">Next exercise →</button>
+  </div>
+</div>
+
+<!-- FULLSCREEN REST TIMER OVERLAY -->
+
+<div class="rest-overlay" id="rest-overlay">
+  <div class="rest-inner">
+    <div class="rest-edit-card" id="rest-edit-card"></div>
+    <div class="rest-timer-display" id="rest-timer-display">2:00</div>
+    <div class="rest-timer-label" id="rest-timer-label">REST</div>
+    <div class="rest-presets">
+      <button class="rest-preset" onclick="setRestDuration(60)">1:00</button>
+      <button class="rest-preset" onclick="setRestDuration(90)">1:30</button>
+      <button class="rest-preset active" onclick="setRestDuration(120)">2:00</button>
+      <button class="rest-preset" onclick="setRestDuration(180)">3:00</button>
+    </div>
+    <div class="rest-controls">
+      <button class="rest-ctrl-btn pause" id="rest-pause-btn" onclick="toggleRestPause()">⏸ Pause</button>
+      <button class="rest-ctrl-btn skip" onclick="skipRest()">Skip →</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM WORKOUT BUILDER -->
+
+<div class="custom-workout-overlay" id="custom-workout-overlay">
+  <div class="cw-header">
+    <button class="aw-back" onclick="closeCustomWorkout()">✕</button>
+    <div class="cw-title">Build Your Workout</div>
+    <div class="cw-subtitle">Adapted to your phase & history</div>
+  </div>
+  <div class="cw-body">
+    <div class="cw-section-title">YOUR PLAN <span id="cw-count">(0)</span></div>
+    <div id="cw-selected-list" class="cw-selected-list"></div>
+
+    <div class="cw-section-title" style="margin-top:18px">ADD EXERCISES</div>
+    <div class="insight-chips" id="cw-muscle-filter" style="margin-bottom:12px">
+      <div class="i-chip active" onclick="filterCWExercises('all',this)">All</div>
+      <div class="i-chip" onclick="filterCWExercises('quads',this)">Quads</div>
+      <div class="i-chip" onclick="filterCWExercises('glutes',this)">Glutes</div>
+      <div class="i-chip" onclick="filterCWExercises('hamstring',this)">Hamstrings</div>
+      <div class="i-chip" onclick="filterCWExercises('back',this)">Back</div>
+      <div class="i-chip" onclick="filterCWExercises('chest',this)">Chest</div>
+      <div class="i-chip" onclick="filterCWExercises('shoulders',this)">Shoulders</div>
+      <div class="i-chip" onclick="filterCWExercises('core',this)">Core</div>
+      <div class="i-chip" onclick="filterCWExercises('biceps',this)">Biceps</div>
+      <div class="i-chip" onclick="filterCWExercises('triceps',this)">Triceps</div>
+    </div>
+    <div id="cw-exercise-list" class="cw-exercise-list"></div>
+  </div>
+  <div class="cw-footer">
+    <button class="btn-primary" id="cw-start-btn" onclick="startCustomWorkout()" disabled>Start workout 💪</button>
   </div>
 </div>
 
