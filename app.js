@@ -329,6 +329,77 @@ const SESSION_META = {
   full_body_light:   { name:'Full Body · Light',    type:'Moderate Full Body',    emoji:'🌱', duration:'45 min', kcal:'~240', color:'linear-gradient(135deg,#B8D4C0,#C9B8E8)', tier:'light',    muscles:['quads','back','chest','glutes','core'],      exercises:{ quads:['goblet_squat','leg_press'], back:['lat_pulldown','seated_cable_row'], chest:['db_chest_press','cable_chest_fly'], glutes:['db_rdl','walking_lunge'], core:['plank','cable_crunch'] }, picksPerGroup:1 },
 };
 
+// ── WORKOUT SPLITS — female aesthetics focus ──────────────────────────────
+// Priority: Glutes > Legs (Quads + Hamstrings) > Back > Core/Abs > Shoulders > Arms
+// Chest is treated as minor accessory only. Every day includes core work.
+const WORKOUT_SPLITS = {
+  2: {
+    name: '2-Day Split', focus: 'Glutes · Legs · Back', emoji: '🍑',
+    days: [
+      { name: 'Glutes & Legs', emoji: '🍑', tag: 'Hip Thrust · Squat · RDL · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','rdl','leg_curl_seated','cable_kickback','ab_wheel','cable_crunch'] },
+      { name: 'Back & Hamstrings', emoji: '🏹', tag: 'Row · Pulldown · RDL · Abs · Calves',
+        exercises: ['barbell_row','lat_pulldown','db_row','face_pull','leg_curl_lying','plank','calf_raise'] },
+    ]
+  },
+  3: {
+    name: '3-Day Split', focus: 'Glutes · Back · Legs', emoji: '🌸',
+    days: [
+      { name: 'Glutes & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Bulgarian · Kickback · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','cable_kickback','leg_extension','ab_wheel','cable_crunch'] },
+      { name: 'Back & Core', emoji: '🏹', tag: 'Row · Pulldown · Chin-Up · Face Pull · Abs',
+        exercises: ['barbell_row','lat_pulldown','db_row','seated_cable_row','face_pull','ab_crunch_machine','plank'] },
+      { name: 'Hamstrings & Glutes', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Hip Thrust · Abs',
+        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','cable_crunch','calf_raise'] },
+    ]
+  },
+  4: {
+    name: '4-Day Split', focus: 'Glutes · Back · Legs · Core', emoji: '💜',
+    days: [
+      { name: 'Glutes A & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Leg Press · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','leg_press','cable_kickback','ab_wheel','cable_crunch'] },
+      { name: 'Back A & Core', emoji: '🏹', tag: 'Row · Pulldown · Chin-Up · Face Pull · Abs',
+        exercises: ['barbell_row','lat_pulldown','chin_up','seated_cable_row','face_pull','ab_crunch_machine','plank'] },
+      { name: 'Hamstrings & Glutes B', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Hip Thrust · Abs',
+        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','cable_crunch','calf_raise'] },
+      { name: 'Back B & Legs', emoji: '⬇️', tag: 'Row · Pullover · Hack Squat · Lunge · Abs',
+        exercises: ['db_row','pullover','hack_squat','walking_lunge','leg_extension','ab_wheel','plank'] },
+    ]
+  },
+  5: {
+    name: '5-Day Split', focus: 'Glutes · Back · Legs · Abs', emoji: '🌟',
+    days: [
+      { name: 'Glutes A & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Leg Press · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','leg_press','cable_kickback','leg_extension','cable_crunch'] },
+      { name: 'Back A & Core', emoji: '🏹', tag: 'Row · Pulldown · Chin-Up · Face Pull · Abs',
+        exercises: ['barbell_row','lat_pulldown','chin_up','db_row','face_pull','ab_wheel','plank'] },
+      { name: 'Hamstrings & Glutes B', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Lunge · Abs',
+        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','walking_lunge','cable_crunch'] },
+      { name: 'Back B & Abs', emoji: '⬇️', tag: 'Row · Pullover · Seated Row · Abs · Calves',
+        exercises: ['db_row','seated_cable_row','pullover','ab_crunch_machine','ab_wheel','cable_crunch','calf_raise'] },
+      { name: 'Legs & Core', emoji: '🦵', tag: 'Hack Squat · Goblet · Leg Curl · Abs · Calves',
+        exercises: ['hack_squat','goblet_squat','leg_curl_seated','cable_kickback','plank','ab_wheel','calf_raise'] },
+    ]
+  },
+  6: {
+    name: '6-Day Split', focus: 'Glutes · Back · Legs · Abs', emoji: '🏆',
+    days: [
+      { name: 'Glutes A & Quads', emoji: '🍑', tag: 'Hip Thrust · Squat · Bulgarian · Kickback · Abs',
+        exercises: ['barbell_hip_thrust','barbell_squat','bulgarian_squat','cable_kickback','leg_extension','cable_crunch'] },
+      { name: 'Back A & Core', emoji: '🏹', tag: 'Row · Pulldown · Chin-Up · Face Pull · Abs',
+        exercises: ['barbell_row','lat_pulldown','chin_up','face_pull','ab_wheel','plank'] },
+      { name: 'Hamstrings & Glutes B', emoji: '🔄', tag: 'RDL · Sumo · Leg Curl · Hip Thrust',
+        exercises: ['rdl','sumo_deadlift','leg_curl_lying','db_hip_thrust','nordic_curl','cable_crunch'] },
+      { name: 'Back B & Abs', emoji: '⬇️', tag: 'DB Row · Seated Row · Pullover · Abs',
+        exercises: ['db_row','seated_cable_row','pullover','ab_crunch_machine','ab_wheel','calf_raise'] },
+      { name: 'Legs & Core', emoji: '🦵', tag: 'Hack Squat · Leg Press · Goblet · Lunge · Abs',
+        exercises: ['hack_squat','leg_press','goblet_squat','walking_lunge','plank','cable_crunch'] },
+      { name: 'Glutes C & Abs', emoji: '✨', tag: 'DB Hip Thrust · DB RDL · Kickback · Abs · Calves',
+        exercises: ['db_hip_thrust','db_rdl','cable_kickback','leg_curl_seated','ab_crunch_machine','ab_wheel','calf_raise'] },
+    ]
+  },
+};
+
 function selectSessionType(phase, tier) {
   const available = SESSION_TYPES[phase] || SESSION_TYPES.follicular;
   const trained = state.muscleLog || {};
@@ -1844,7 +1915,10 @@ let restTimerInterval = null;
 let restTimerPaused = false;
 let workoutStartTime = null;
 let sessionRPEs = [];
-let customExercises = []; // keys for custom workout builder
+let customExercises = []; // kept for legacy refs; mirrors customDays[currentCustomDay]
+let customDays = [[]];   // multi-day custom plan: array of exercise-key arrays
+let currentCustomDay = 0; // which day tab is active in custom builder
+let activeSplitDayCount = 4; // selected split count in splits tab
 
 // Coaching cues per exercise type
 const COACHING_CUES = {
@@ -2299,17 +2373,160 @@ function closeCompletion() {
 }
 
 // ── CUSTOM WORKOUT BUILDER ──────────────────
+
 function openCustomWorkout() {
-  customExercises = [];
+  customDays = [[]];
+  customExercises = customDays[0];
+  currentCustomDay = 0;
+  activeSplitDayCount = 4;
   document.getElementById('custom-workout-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
-  renderCWExercises('all');
-  renderCWSelected();
+  openCWTab('splits');
+  selectSplitDayCount(4);
 }
 
 function closeCustomWorkout() {
   document.getElementById('custom-workout-overlay').classList.remove('open');
   document.body.style.overflow = '';
+}
+
+function openCWTab(tab) {
+  document.getElementById('cw-tab-splits').classList.toggle('active', tab === 'splits');
+  document.getElementById('cw-tab-custom').classList.toggle('active', tab === 'custom');
+  document.getElementById('cw-panel-splits').style.display = tab === 'splits' ? 'flex' : 'none';
+  document.getElementById('cw-panel-custom').style.display = tab === 'custom' ? 'flex' : 'none';
+  if (tab === 'custom') {
+    renderCustomDayTabs();
+    // Reset filter to All
+    document.querySelectorAll('#cw-muscle-filter .i-chip').forEach(c => c.classList.remove('active'));
+    const first = document.querySelector('#cw-muscle-filter .i-chip');
+    if (first) first.classList.add('active');
+    renderCWExercises('all');
+    renderCWSelected();
+  }
+}
+
+// ── Splits tab ──
+
+function selectSplitDayCount(n) {
+  activeSplitDayCount = n;
+  document.querySelectorAll('.split-day-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === n);
+  });
+  const split = WORKOUT_SPLITS[n];
+  if (!split) return;
+  const badge = document.getElementById('split-focus-badge');
+  if (badge) badge.textContent = split.emoji + ' ' + split.focus;
+  renderSplitCards(n);
+}
+
+function renderSplitCards(n) {
+  const split = WORKOUT_SPLITS[n];
+  if (!split) return;
+  const container = document.getElementById('split-cards-container');
+  container.innerHTML = '';
+  split.days.forEach((day, idx) => {
+    const preview = day.exercises.slice(0, 3).map(key => {
+      const ex = EXERCISE_DB[key];
+      return ex ? `<span class="split-ex-pill">${ex.icon} ${ex.name}</span>` : '';
+    }).join('');
+    const more = day.exercises.length > 3
+      ? `<span class="split-more-pill">+${day.exercises.length - 3} more</span>` : '';
+    const card = document.createElement('div');
+    card.className = 'split-day-card';
+    card.innerHTML = `
+      <div class="split-card-num">Day ${idx + 1}</div>
+      <div class="split-card-name">${day.emoji} ${day.name}</div>
+      <div class="split-card-tag">${day.tag}</div>
+      <div class="split-card-pills">${preview}${more}</div>
+      <button class="split-start-btn" onclick="startSplitDay(${n},${idx})">Start Day ${idx + 1} →</button>`;
+    container.appendChild(card);
+  });
+}
+
+function startSplitDay(splitN, dayIdx) {
+  const split = WORKOUT_SPLITS[splitN];
+  if (!split) return;
+  const day = split.days[dayIdx];
+  if (!day) return;
+  const phase = state.phase;
+  const tier = getMLResult().modifier.tier;
+  const phaseColors = {
+    menstrual:  'linear-gradient(135deg,#F2A7B4,#E8849A)',
+    follicular: 'linear-gradient(135deg,#C9B8E8,#A896D4)',
+    ovulatory:  'linear-gradient(135deg,#F9C9A3,#F0A873)',
+    luteal:     'linear-gradient(135deg,#B8D4C0,#8CBF9C)',
+  };
+  const exerciseEntries = day.exercises.map(key => {
+    const ex = EXERCISE_DB[key];
+    if (!ex) return null;
+    const target = computeTarget(key, phase, tier);
+    const repsLabel = (ex.muscle === 'core' && ex.name.includes('Plank')) ? `${target.reps} sec` : `${target.reps}`;
+    return { ...ex, key, sets:`${target.sets} × ${repsLabel}`, targetLoad:target.load, isProgression:target.isProgression, progressionLabel:target.label };
+  }).filter(Boolean);
+  const uniqueMuscles = [...new Set(day.exercises.map(k => (EXERCISE_DB[k] || {}).muscle).filter(Boolean))];
+  currentWorkout = {
+    name: `${split.name} · Day ${dayIdx + 1}`,
+    emoji: day.emoji, type: split.focus,
+    color: phaseColors[phase] || phaseColors.follicular,
+    exercises: [...day.exercises], exerciseEntries,
+    musclesToLog: uniqueMuscles,
+    duration: `~${Math.round(day.exercises.length * 4.5)} min`,
+    intensity: tier,
+    kcal: `~${Math.round(day.exercises.length * 35)}`,
+    reason: `${split.name} · ${day.name} · adapted to your phase`,
+  };
+  closeCustomWorkout();
+  startActiveWorkout();
+}
+
+// ── Custom tab ──
+
+function renderCustomDayTabs() {
+  const row = document.getElementById('cw-day-tabs-row');
+  const removeBtn = document.getElementById('cw-remove-day-btn');
+  row.innerHTML = '';
+  customDays.forEach((_, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'cw-day-tab' + (idx === currentCustomDay ? ' active' : '');
+    btn.textContent = `Day ${idx + 1}`;
+    btn.onclick = () => switchCustomDay(idx);
+    row.appendChild(btn);
+  });
+  if (removeBtn) removeBtn.style.display = customDays.length > 1 ? 'inline-flex' : 'none';
+}
+
+function switchCustomDay(idx) {
+  currentCustomDay = idx;
+  customExercises = customDays[idx];
+  renderCustomDayTabs();
+  document.querySelectorAll('#cw-muscle-filter .i-chip').forEach(c => c.classList.remove('active'));
+  const first = document.querySelector('#cw-muscle-filter .i-chip');
+  if (first) first.classList.add('active');
+  renderCWExercises('all');
+  renderCWSelected();
+}
+
+function addCustomDay() {
+  customDays.push([]);
+  currentCustomDay = customDays.length - 1;
+  customExercises = customDays[currentCustomDay];
+  renderCustomDayTabs();
+  document.querySelectorAll('#cw-muscle-filter .i-chip').forEach(c => c.classList.remove('active'));
+  const first = document.querySelector('#cw-muscle-filter .i-chip');
+  if (first) first.classList.add('active');
+  renderCWExercises('all');
+  renderCWSelected();
+}
+
+function removeCustomDay() {
+  if (customDays.length <= 1) return;
+  customDays.splice(currentCustomDay, 1);
+  currentCustomDay = Math.min(currentCustomDay, customDays.length - 1);
+  customExercises = customDays[currentCustomDay];
+  renderCustomDayTabs();
+  renderCWExercises('all');
+  renderCWSelected();
 }
 
 function filterCWExercises(muscle, el) {
@@ -2320,10 +2537,12 @@ function filterCWExercises(muscle, el) {
 
 function renderCWExercises(muscle) {
   const list = document.getElementById('cw-exercise-list');
+  if (!list) return;
   list.innerHTML = '';
+  const dayEx = customDays[currentCustomDay] || [];
   Object.entries(EXERCISE_DB).forEach(([key, ex]) => {
     if (muscle !== 'all' && ex.muscle !== muscle) return;
-    const isAdded = customExercises.includes(key);
+    const isAdded = dayEx.includes(key);
     const div = document.createElement('div');
     div.className = 'cw-ex-item' + (isAdded ? ' added' : '');
     div.innerHTML = `
@@ -2338,12 +2557,11 @@ function renderCWExercises(muscle) {
 }
 
 function toggleCWExercise(key) {
-  const idx = customExercises.indexOf(key);
-  if (idx >= 0) {
-    customExercises.splice(idx, 1);
-  } else {
-    customExercises.push(key);
-  }
+  const dayEx = customDays[currentCustomDay] || [];
+  const idx = dayEx.indexOf(key);
+  if (idx >= 0) dayEx.splice(idx, 1);
+  else dayEx.push(key);
+  customExercises = dayEx;
   const activeChip = document.querySelector('#cw-muscle-filter .i-chip.active');
   const label = activeChip ? activeChip.textContent.toLowerCase() : 'all';
   const muscleMap = { all:'all', quads:'quads', glutes:'glutes', back:'back', chest:'chest', shoulders:'shoulders', core:'core', hamstrings:'hamstring', calves:'calves', biceps:'biceps', triceps:'triceps' };
@@ -2355,15 +2573,16 @@ function renderCWSelected() {
   const list = document.getElementById('cw-selected-list');
   const count = document.getElementById('cw-count');
   const btn = document.getElementById('cw-start-btn');
-  count.textContent = `(${customExercises.length})`;
-  btn.disabled = customExercises.length === 0;
+  const dayEx = customDays[currentCustomDay] || [];
+  if (count) count.textContent = `(${dayEx.length})`;
+  if (btn) btn.disabled = dayEx.length === 0;
 
-  if (customExercises.length === 0) {
+  if (dayEx.length === 0) {
     list.innerHTML = '<div class="cw-empty">No exercises added yet. Pick from the list below.</div>';
     return;
   }
   list.innerHTML = '';
-  customExercises.forEach(key => {
+  dayEx.forEach(key => {
     const ex = EXERCISE_DB[key];
     if (!ex) return;
     const target = computeTarget(key, state.phase, getMLResult().modifier.tier);
@@ -2381,7 +2600,8 @@ function renderCWSelected() {
 }
 
 function startCustomWorkout() {
-  if (customExercises.length === 0) return;
+  const dayEx = customDays[currentCustomDay] || [];
+  if (dayEx.length === 0) return;
   const phase = state.phase;
   const tier = getMLResult().modifier.tier;
   const phaseColors = {
@@ -2390,19 +2610,19 @@ function startCustomWorkout() {
     ovulatory:  'linear-gradient(135deg,#F9C9A3,#F0A873)',
     luteal:     'linear-gradient(135deg,#B8D4C0,#8CBF9C)',
   };
-  const exerciseEntries = customExercises.map(key => {
+  const exerciseEntries = dayEx.map(key => {
     const ex = EXERCISE_DB[key];
     if (!ex) return null;
     const target = computeTarget(key, phase, tier);
     const repsLabel = (ex.muscle === 'core' && ex.name.includes('Plank')) ? `${target.reps} sec` : `${target.reps}`;
     return { ...ex, key, sets:`${target.sets} × ${repsLabel}`, targetLoad:target.load, isProgression:target.isProgression, progressionLabel:target.label };
   }).filter(Boolean);
-
-  const uniqueMuscles = [...new Set(customExercises.map(k => (EXERCISE_DB[k] || {}).muscle).filter(Boolean))];
+  const uniqueMuscles = [...new Set(dayEx.map(k => (EXERCISE_DB[k] || {}).muscle).filter(Boolean))];
+  const dayLabel = customDays.length > 1 ? ` · Day ${currentCustomDay + 1}` : '';
   currentWorkout = {
-    name: 'Custom Workout', emoji: '💪', type: 'Custom',
+    name: `Custom Workout${dayLabel}`, emoji: '💪', type: 'Custom',
     color: phaseColors[phase] || phaseColors.follicular,
-    exercises: customExercises, exerciseEntries,
+    exercises: [...dayEx], exerciseEntries,
     musclesToLog: uniqueMuscles,
     duration: '— min', intensity: '—', kcal: '~0',
     reason: 'Your own plan · adapted to your phase',
