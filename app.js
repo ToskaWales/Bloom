@@ -1836,14 +1836,15 @@ function submitCheckin() {
 // ═══════════════════════════════════════════
 let currentWorkout = null;
 let currentExerciseIdx = 0;
-let setsCompleted = [];
-let timerInterval = null;
-let timerSecs = 0;
-let timerRunning = false;
-let timerTarget = 120;
+let setData = [];         // [{load, reps, done}] for current exercise
+let perExerciseSets = {}; // {exKey: [{load, reps, done}]} accumulated across exercises
+let restDuration = 120;   // countdown duration in seconds
+let restCountdown = 0;
+let restTimerInterval = null;
+let restTimerPaused = false;
 let workoutStartTime = null;
-let currentLoad = 60;
 let sessionRPEs = [];
+let customExercises = []; // keys for custom workout builder
 
 // Coaching cues per exercise type
 const COACHING_CUES = {
@@ -1942,61 +1943,98 @@ function startActiveWorkout() {
   currentExerciseIdx = 0;
   workoutStartTime = Date.now();
   sessionRPEs = [];
-  // Seed initial load from first exercise's progression target
-  const firstKey = currentWorkout.exercises[0];
-  const firstTarget = computeTarget(firstKey, state.phase, getMLResult().modifier.tier);
-  currentLoad = firstTarget.load > 0 ? firstTarget.load : 60;
+  perExerciseSets = {};
+  setData = [];
   renderActiveExercise();
   document.getElementById('active-workout').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 function renderActiveExercise() {
+  // Use exerciseEntries (phase-scaled) if available, fall back to EXERCISES
+  const entries = currentWorkout.exerciseEntries || [];
+  const entry = entries[currentExerciseIdx];
   const exKey = currentWorkout.exercises[currentExerciseIdx];
-  const ex = EXERCISES[exKey];
-  if (!ex) return;
+  if (!entry && !exKey) return;
+
+  const name = entry ? entry.name : (EXERCISES[exKey] || {}).name || exKey;
+  const detail = entry ? entry.detail : '';
+  const setsStr = entry ? entry.sets : '3 × 10';
+  const targetLoad = (entry && entry.targetLoad > 0) ? entry.targetLoad : 0;
+  const hasLoad = targetLoad > 0;
+
   const total = currentWorkout.exercises.length;
 
+  // Parse "3 × 10" → numSets=3, targetReps=10
+  const setsMatch = setsStr.match(/(\d+)\s*[×x]\s*([\d.]+)/);
+  const numSets = setsMatch ? parseInt(setsMatch[1]) : 3;
+  const targetReps = setsMatch ? parseInt(setsMatch[2]) : 10;
+
+  // Header
   document.getElementById('aw-prog-text').textContent = `Exercise ${currentExerciseIdx + 1} of ${total}`;
-  document.getElementById('aw-ex-name').textContent = ex.name;
-  document.getElementById('aw-sets-info').textContent = `${ex.sets} · ${ex.detail}`;
+  document.getElementById('aw-ex-name').textContent = name;
+  document.getElementById('aw-sets-info').textContent = `${setsStr} · ${detail}`;
   document.getElementById('aw-prog-fill').style.width = ((currentExerciseIdx + 1) / total * 100) + '%';
   document.getElementById('aw-hero-header').style.background = currentWorkout.color;
 
-  // coaching cue
+  // Coaching cue
   document.getElementById('aw-cue-icon').textContent = ['💡','🎯','⚡️','✨'][currentExerciseIdx % 4];
   document.getElementById('aw-cue-text').textContent = getCue(exKey);
 
-  // Per-exercise progression target
-  const exTarget = computeTarget(exKey, state.phase, getMLResult().modifier.tier);
-  if (exTarget.load > 0) {
-    currentLoad = exTarget.load;
-  }
-  document.getElementById('st-load-val').textContent = currentLoad;
-  updateLoadNote();
-  if (exTarget.progressionLabel) {
-    const note = document.getElementById('st-load-note');
-    note.textContent = exTarget.progressionLabel;
-    note.style.color = exTarget.isProgression ? 'var(--sage-d)' : 'var(--rose-d)';
+  // Phase/progression note
+  const ml = getMLResult();
+  const note = document.getElementById('st-load-note');
+  if (entry && entry.isProgression) {
+    note.textContent = entry.progressionLabel || '↑ progressive overload';
+    note.style.color = 'var(--sage-d)';
+  } else if (entry && entry.progressionLabel && entry.progressionLabel.startsWith('↓')) {
+    note.textContent = entry.progressionLabel;
+    note.style.color = 'var(--rose-d)';
+  } else if (ml.modifier.action === 'PR_WINDOW') {
+    note.textContent = '⚡️ Peak phase — try pushing load today';
+    note.style.color = 'var(--peach)';
+  } else if (ml.modifier.volumeMod <= -20) {
+    note.textContent = '🍃 Lighter load recommended today';
+    note.style.color = 'var(--sage-d)';
+  } else {
+    note.textContent = '';
   }
 
-  // sets
-  const setsMatch = ex.sets.match(/(\d+)\s*[×x]/);
-  const numSets = setsMatch ? parseInt(setsMatch[1]) : 3;
-  setsCompleted = new Array(numSets).fill(false);
-  const sc = document.getElementById('set-circles');
-  sc.innerHTML = '';
-  for (let i = 0; i < numSets; i++) {
-    const circle = document.createElement('div');
-    circle.className = 'set-circle';
-    circle.textContent = i + 1;
-    const idx = i;
-    circle.onclick = () => {
-      setsCompleted[idx] = !setsCompleted[idx];
-      circle.classList.toggle('done', setsCompleted[idx]);
-    };
-    sc.appendChild(circle);
-  }
+  // Build per-set data pre-filled from target
+  setData = Array.from({length: numSets}, () => ({
+    load: targetLoad,
+    reps: targetReps,
+    done: false
+  }));
+
+  // Render vertical set rows
+  const list = document.getElementById('sets-list');
+  list.innerHTML = '';
+  setData.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    row.id = `set-row-${i}`;
+
+    const weightBlock = hasLoad
+      ? `<div class="set-input-group">
+           <input type="number" step="2.5" min="0" inputmode="decimal" class="set-weight-input" id="set-weight-${i}" value="${s.load}">
+           <span class="set-input-unit">kg</span>
+         </div>
+         <div class="set-sep">×</div>`
+      : `<div class="set-bw-label">BW ×</div>`;
+
+    row.innerHTML = `
+      <div class="set-num">${i + 1}</div>
+      <div class="set-inputs">
+        ${weightBlock}
+        <div class="set-input-group">
+          <input type="number" step="1" min="1" inputmode="numeric" class="set-reps-input" id="set-reps-${i}" value="${s.reps}">
+          <span class="set-input-unit">reps</span>
+        </div>
+      </div>
+      <button class="set-done-btn" id="set-done-${i}" onclick="markSetDone(${i})" aria-label="Mark set done">✓</button>`;
+    list.appendChild(row);
+  });
 
   // RPE scale
   const rpeScale = document.getElementById('rpe-scale');
@@ -2023,41 +2061,127 @@ function renderActiveExercise() {
 
   const isLast = currentExerciseIdx === total - 1;
   document.getElementById('next-ex-btn').textContent = isLast ? 'Finish workout 🎉' : 'Next exercise →';
-
-  resetTimer();
 }
 
-function adjustLoad(delta) {
-  currentLoad = Math.max(0, Math.round((currentLoad + delta) * 10) / 10);
-  document.getElementById('st-load-val').textContent = currentLoad;
-  updateLoadNote();
-}
-
-function updateLoadNote() {
-  const ml = getMLResult();
-  const note = document.getElementById('st-load-note');
-  if (ml.modifier.action === 'PR_WINDOW') {
-    note.textContent = '⚡️ Peak phase — try pushing load today';
-    note.style.color = 'var(--peach)';
-  } else if (ml.modifier.volumeMod <= -20) {
-    note.textContent = '🍃 Lighter load recommended today';
-    note.style.color = 'var(--sage-d)';
-  } else {
-    note.textContent = '';
+function updateSetData(idx) {
+  const wEl = document.getElementById(`set-weight-${idx}`);
+  const rEl = document.getElementById(`set-reps-${idx}`);
+  if (setData[idx]) {
+    if (wEl) setData[idx].load = parseFloat(wEl.value) || 0;
+    if (rEl) setData[idx].reps = parseInt(rEl.value) || 1;
   }
 }
 
-function setRestTimer(secs) {
-  timerTarget = secs;
-  document.querySelectorAll('.rest-preset').forEach(b => b.classList.remove('active'));
-  const labels = {60:'1:00', 90:'1:30', 120:'2:00', 180:'3:00'};
-  document.querySelectorAll('.rest-preset').forEach(b => {
-    if (b.textContent === (labels[secs] || '')) b.classList.add('active');
+function markSetDone(idx) {
+  updateSetData(idx);
+  const wasDone = setData[idx].done;
+  setData[idx].done = !wasDone;
+  const row = document.getElementById(`set-row-${idx}`);
+  if (row) row.classList.toggle('done', setData[idx].done);
+  if (setData[idx].done) {
+    showRestOverlay(idx);
+  }
+}
+
+function showRestOverlay(completedSetIdx) {
+  const overlay = document.getElementById('rest-overlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const s = setData[completedSetIdx];
+  const entry = (currentWorkout.exerciseEntries || [])[currentExerciseIdx];
+  const exName = entry ? entry.name : '';
+  const hasLoad = s.load > 0;
+
+  document.getElementById('rest-edit-card').innerHTML = `
+    <div class="rest-edit-label">Set ${completedSetIdx + 1} · ${exName}</div>
+    <div class="rest-edit-inputs">
+      ${hasLoad ? `<div class="rest-edit-group">
+        <input type="number" step="2.5" min="0" inputmode="decimal" class="rest-edit-input" id="rest-weight-input" value="${s.load}">
+        <span class="rest-edit-unit">kg</span>
+      </div><div class="rest-edit-sep">×</div>` : ''}
+      <div class="rest-edit-group">
+        <input type="number" step="1" min="1" inputmode="numeric" class="rest-edit-input" id="rest-reps-input" value="${s.reps}">
+        <span class="rest-edit-unit">reps</span>
+      </div>
+    </div>`;
+
+  // Sync edits back to setData + main row
+  const wIn = document.getElementById('rest-weight-input');
+  const rIn = document.getElementById('rest-reps-input');
+  if (wIn) wIn.oninput = () => {
+    setData[completedSetIdx].load = parseFloat(wIn.value) || 0;
+    const m = document.getElementById(`set-weight-${completedSetIdx}`);
+    if (m) m.value = wIn.value;
+  };
+  if (rIn) rIn.oninput = () => {
+    setData[completedSetIdx].reps = parseInt(rIn.value) || 1;
+    const m = document.getElementById(`set-reps-${completedSetIdx}`);
+    if (m) m.value = rIn.value;
+  };
+
+  // Reset and start countdown
+  restTimerPaused = false;
+  restCountdown = restDuration;
+  document.getElementById('rest-pause-btn').textContent = '⏸ Pause';
+  updateRestDisplay();
+  clearInterval(restTimerInterval);
+  restTimerInterval = setInterval(() => {
+    if (restTimerPaused) return;
+    restCountdown--;
+    updateRestDisplay();
+    if (restCountdown <= 0) {
+      clearInterval(restTimerInterval);
+      document.getElementById('rest-timer-display').textContent = 'Go!';
+      document.getElementById('rest-timer-label').textContent = 'Time to lift ✨';
+      document.getElementById('rest-timer-label').style.color = 'var(--rose)';
+      setTimeout(() => skipRest(), 1500);
+    }
+  }, 1000);
+}
+
+function updateRestDisplay() {
+  const m = Math.floor(Math.max(0, restCountdown) / 60).toString().padStart(2, '0');
+  const s = (Math.max(0, restCountdown) % 60).toString().padStart(2, '0');
+  document.getElementById('rest-timer-display').textContent = `${m}:${s}`;
+  const lbl = document.getElementById('rest-timer-label');
+  if (restCountdown <= 10 && restCountdown > 0) {
+    lbl.textContent = 'Almost ready...';
+    lbl.style.color = 'var(--rose-d)';
+  } else if (restCountdown > 0) {
+    lbl.textContent = 'REST';
+    lbl.style.color = '';
+  }
+}
+
+function toggleRestPause() {
+  restTimerPaused = !restTimerPaused;
+  document.getElementById('rest-pause-btn').textContent = restTimerPaused ? '▶ Resume' : '⏸ Pause';
+}
+
+function skipRest() {
+  clearInterval(restTimerInterval);
+  document.getElementById('rest-overlay').classList.remove('open');
+  document.body.style.overflow = 'hidden'; // active workout is still open
+}
+
+function setRestDuration(secs) {
+  restDuration = secs;
+  document.querySelectorAll('#rest-overlay .rest-preset').forEach(b => b.classList.remove('active'));
+  const labels = { 60:'1:00', 90:'1:30', 120:'2:00', 180:'3:00' };
+  document.querySelectorAll('#rest-overlay .rest-preset').forEach(b => {
+    if (b.textContent === labels[secs]) b.classList.add('active');
   });
-  resetTimer();
+  restCountdown = secs;
+  updateRestDisplay();
 }
 
 function nextExercise() {
+  // Capture final input values and save
+  setData.forEach((_, i) => updateSetData(i));
+  const exKey = currentWorkout.exercises[currentExerciseIdx];
+  perExerciseSets[exKey] = setData.map(s => ({...s}));
+
   const total = currentWorkout.exercises.length;
   if (currentExerciseIdx < total - 1) {
     currentExerciseIdx++;
@@ -2068,9 +2192,10 @@ function nextExercise() {
 }
 
 function finishWorkout() {
+  clearInterval(restTimerInterval);
+  document.getElementById('rest-overlay').classList.remove('open');
   document.getElementById('active-workout').classList.remove('open');
   document.body.style.overflow = '';
-  if (timerInterval) clearInterval(timerInterval);
 
   const elapsed = workoutStartTime ? Math.round((Date.now() - workoutStartTime) / 60000) : 20;
   const avgRPEVal = sessionRPEs.length > 0 ? sessionRPEs.reduce((a,b)=>a+b,0)/sessionRPEs.length : 6;
@@ -2093,11 +2218,19 @@ function finishWorkout() {
   // Track last session's exercises for variety logic in the next plan
   state.lastWorkoutExercises = (currentWorkout.exercises || []);
 
-  // Save per-exercise history for progression engine
+  // Save per-exercise history for progression engine (use actual logged loads/reps)
   const tier = getMLResult().modifier.tier;
   (currentWorkout.exercises || []).forEach(key => {
-    const target = computeTarget(key, state.phase, tier);
-    saveExHistory(key, { load: currentLoad, reps: target.reps, rpe: avgRPEVal });
+    const sets = perExerciseSets[key] || [];
+    const doneSets = sets.filter(s => s.done);
+    if (doneSets.length > 0) {
+      const avgLoad = doneSets.reduce((a, s) => a + s.load, 0) / doneSets.length;
+      const avgReps = Math.round(doneSets.reduce((a, s) => a + s.reps, 0) / doneSets.length);
+      saveExHistory(key, { load: avgLoad, reps: avgReps, rpe: avgRPEVal });
+    } else {
+      const target = computeTarget(key, state.phase, tier);
+      saveExHistory(key, { load: target.load, reps: target.reps, rpe: avgRPEVal });
+    }
   });
   // Log muscles trained for rotation tracking
   if (currentWorkout.musclesToLog) logMusclesTrained(currentWorkout.musclesToLog);
@@ -2154,9 +2287,10 @@ function finishWorkout() {
 }
 
 function closeActiveWorkout() {
+  clearInterval(restTimerInterval);
+  document.getElementById('rest-overlay').classList.remove('open');
   document.getElementById('active-workout').classList.remove('open');
   document.body.style.overflow = '';
-  if (timerInterval) clearInterval(timerInterval);
 }
 
 function closeCompletion() {
@@ -2164,43 +2298,117 @@ function closeCompletion() {
   goTo('today', 'left');
 }
 
-// Timer
-function toggleTimer() {
-  if (timerRunning) {
-    clearInterval(timerInterval);
-    timerRunning = false;
-    document.getElementById('timer-btn').textContent = '▶ Resume rest';
+// ── CUSTOM WORKOUT BUILDER ──────────────────
+function openCustomWorkout() {
+  customExercises = [];
+  document.getElementById('custom-workout-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderCWExercises('all');
+  renderCWSelected();
+}
+
+function closeCustomWorkout() {
+  document.getElementById('custom-workout-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function filterCWExercises(muscle, el) {
+  document.querySelectorAll('#cw-muscle-filter .i-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderCWExercises(muscle);
+}
+
+function renderCWExercises(muscle) {
+  const list = document.getElementById('cw-exercise-list');
+  list.innerHTML = '';
+  Object.entries(EXERCISE_DB).forEach(([key, ex]) => {
+    if (muscle !== 'all' && ex.muscle !== muscle) return;
+    const isAdded = customExercises.includes(key);
+    const div = document.createElement('div');
+    div.className = 'cw-ex-item' + (isAdded ? ' added' : '');
+    div.innerHTML = `
+      <div class="cw-ex-icon" style="background:${ex.color || '#EDE8F5'}">${ex.icon || '🏋️'}</div>
+      <div class="cw-ex-info">
+        <div class="cw-ex-name">${ex.name}</div>
+        <div class="cw-ex-detail">${ex.detail}</div>
+      </div>
+      <button class="cw-add-btn ${isAdded ? 'remove' : 'add'}" onclick="toggleCWExercise('${key}')">${isAdded ? '−' : '+'}</button>`;
+    list.appendChild(div);
+  });
+}
+
+function toggleCWExercise(key) {
+  const idx = customExercises.indexOf(key);
+  if (idx >= 0) {
+    customExercises.splice(idx, 1);
   } else {
-    timerInterval = setInterval(() => {
-      timerSecs++;
-      const remaining = Math.max(0, timerTarget - timerSecs);
-      const m = Math.floor(timerSecs / 60).toString().padStart(2, '0');
-      const s = (timerSecs % 60).toString().padStart(2, '0');
-      document.getElementById('aw-timer').textContent = `${m}:${s}`;
-      if (timerSecs >= timerTarget) {
-        document.getElementById('aw-timer-label').textContent = '✓ Rest done — go!';
-        document.getElementById('aw-timer').style.color = 'var(--sage-d)';
-      }
-    }, 1000);
-    timerRunning = true;
-    document.getElementById('timer-btn').textContent = '⏸ Pause';
-    document.getElementById('aw-timer-label').textContent = 'Rest timer';
-    document.getElementById('aw-timer').style.color = 'var(--ink)';
+    customExercises.push(key);
   }
+  const activeChip = document.querySelector('#cw-muscle-filter .i-chip.active');
+  const label = activeChip ? activeChip.textContent.toLowerCase() : 'all';
+  const muscleMap = { all:'all', quads:'quads', glutes:'glutes', back:'back', chest:'chest', shoulders:'shoulders', core:'core', hamstrings:'hamstring', calves:'calves', biceps:'biceps', triceps:'triceps' };
+  renderCWExercises(muscleMap[label] || label);
+  renderCWSelected();
 }
 
-function resetTimer() {
-  clearInterval(timerInterval);
-  timerRunning = false;
-  timerSecs = 0;
-  document.getElementById('aw-timer').textContent = '00:00';
-  document.getElementById('aw-timer').style.color = 'var(--ink)';
-  document.getElementById('aw-timer-label').textContent = 'Rest timer';
-  document.getElementById('timer-btn').textContent = '▶ Start rest';
+function renderCWSelected() {
+  const list = document.getElementById('cw-selected-list');
+  const count = document.getElementById('cw-count');
+  const btn = document.getElementById('cw-start-btn');
+  count.textContent = `(${customExercises.length})`;
+  btn.disabled = customExercises.length === 0;
+
+  if (customExercises.length === 0) {
+    list.innerHTML = '<div class="cw-empty">No exercises added yet. Pick from the list below.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  customExercises.forEach(key => {
+    const ex = EXERCISE_DB[key];
+    if (!ex) return;
+    const target = computeTarget(key, state.phase, getMLResult().modifier.tier);
+    const div = document.createElement('div');
+    div.className = 'cw-selected-item';
+    div.innerHTML = `
+      <div class="cw-ex-icon" style="background:${ex.color || '#EDE8F5'}">${ex.icon || '🏋️'}</div>
+      <div class="cw-ex-info">
+        <div class="cw-ex-name">${ex.name}</div>
+        <div class="cw-ex-detail">${target.sets} × ${target.reps} reps${target.load > 0 ? ` · ~${target.load}kg` : ''}</div>
+      </div>
+      <button class="cw-remove-btn" onclick="toggleCWExercise('${key}')">×</button>`;
+    list.appendChild(div);
+  });
 }
 
-function updateRPE(val) {
-  document.getElementById('rpe-value').textContent = `RPE ${val}`;
+function startCustomWorkout() {
+  if (customExercises.length === 0) return;
+  const phase = state.phase;
+  const tier = getMLResult().modifier.tier;
+  const phaseColors = {
+    menstrual:  'linear-gradient(135deg,#F2A7B4,#E8849A)',
+    follicular: 'linear-gradient(135deg,#C9B8E8,#A896D4)',
+    ovulatory:  'linear-gradient(135deg,#F9C9A3,#F0A873)',
+    luteal:     'linear-gradient(135deg,#B8D4C0,#8CBF9C)',
+  };
+  const exerciseEntries = customExercises.map(key => {
+    const ex = EXERCISE_DB[key];
+    if (!ex) return null;
+    const target = computeTarget(key, phase, tier);
+    const repsLabel = (ex.muscle === 'core' && ex.name.includes('Plank')) ? `${target.reps} sec` : `${target.reps}`;
+    return { ...ex, key, sets:`${target.sets} × ${repsLabel}`, targetLoad:target.load, isProgression:target.isProgression, progressionLabel:target.label };
+  }).filter(Boolean);
+
+  const uniqueMuscles = [...new Set(customExercises.map(k => (EXERCISE_DB[k] || {}).muscle).filter(Boolean))];
+  currentWorkout = {
+    name: 'Custom Workout', emoji: '💪', type: 'Custom',
+    color: phaseColors[phase] || phaseColors.follicular,
+    exercises: customExercises, exerciseEntries,
+    musclesToLog: uniqueMuscles,
+    duration: '— min', intensity: '—', kcal: '~0',
+    reason: 'Your own plan · adapted to your phase',
+  };
+  closeCustomWorkout();
+  startActiveWorkout();
 }
 
 // ═══════════════════════════════════════════
