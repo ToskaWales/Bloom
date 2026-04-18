@@ -29,6 +29,7 @@ const state = {
   weekSchedule: null,
   weekScheduleWeek: null,
   weekCompletions: {},
+  activePlan: null, // { type:'split'|'custom', splitN, days:[[]], dayAssignments:{weekdayIdx:splitDayIdx} }
 
   // ── GAMIFICATION ──
   badges: [],      // string[] of earned badge keys
@@ -889,8 +890,24 @@ function getMLResult() {
 function invalidateML() { _mlResult = null; }
 
 function getWorkout() {
-  // Ensure phase is set before generating plan
   if (!state.phase) advanceCycleDay();
+  // If today has an active plan assignment, use it
+  if (state.activePlan) {
+    const todayIdx = (new Date().getDay() + 6) % 7;
+    const planDayIdx = state.activePlan.dayAssignments?.[todayIdx];
+    if (planDayIdx !== undefined) {
+      if (state.activePlan.type === 'split') {
+        const w = buildSplitDayWorkout(state.activePlan.splitN, planDayIdx);
+        if (w) return w;
+      } else if (state.activePlan.type === 'custom') {
+        const keys = state.activePlan.days?.[planDayIdx];
+        if (keys && keys.length > 0) {
+          const label = state.activePlan.days.length > 1 ? `Custom · Day ${planDayIdx + 1}` : 'Custom Workout';
+          return buildCustomDayWorkout(keys, label);
+        }
+      }
+    }
+  }
   const ml = getMLResult();
   if (!ml._generatedPlan) {
     const phase = state.phase || 'follicular';
@@ -1535,10 +1552,35 @@ function renderWeekStrip() {
     } else if (!isTraining) {
       icon = '💤'; typeLabel = 'Rest';
     } else {
-      icon = phaseIcons[dayPhase] || '🌸';
-      typeLabel = phaseTypes[dayPhase] || 'Train';
-      if (!isPast) {
-        inlineStyle = ` style="border-color:${phaseColors[dayPhase]}80;background:${phaseColors[dayPhase]}20"`;
+      // Check if an active plan assigns a specific day here
+      const plan = state.activePlan;
+      const planDayIdx = plan && plan.dayAssignments ? plan.dayAssignments[i] : undefined;
+      if (planDayIdx !== undefined) {
+        let planDay;
+        if (plan.type === 'split') {
+          const split = WORKOUT_SPLITS[plan.splitN];
+          planDay = split && split.days[planDayIdx];
+        } else {
+          planDay = plan.days && plan.days[planDayIdx]
+            ? { name: `Day ${planDayIdx + 1}`, emoji: '💪' }
+            : null;
+        }
+        if (planDay) {
+          icon = planDay.emoji;
+          const shortName = planDay.name.length > 9 ? planDay.name.slice(0, 8) + '…' : planDay.name;
+          typeLabel = shortName;
+          if (!isPast) inlineStyle = ` style="border-color:#A896D480;background:#A896D420"`;
+        } else {
+          icon = phaseIcons[dayPhase] || '🌸';
+          typeLabel = phaseTypes[dayPhase] || 'Train';
+          if (!isPast) inlineStyle = ` style="border-color:${phaseColors[dayPhase]}80;background:${phaseColors[dayPhase]}20"`;
+        }
+      } else {
+        icon = phaseIcons[dayPhase] || '🌸';
+        typeLabel = phaseTypes[dayPhase] || 'Train';
+        if (!isPast) {
+          inlineStyle = ` style="border-color:${phaseColors[dayPhase]}80;background:${phaseColors[dayPhase]}20"`;
+        }
       }
     }
 
@@ -2375,14 +2417,25 @@ function closeCompletion() {
 // ── CUSTOM WORKOUT BUILDER ──────────────────
 
 function openCustomWorkout() {
-  customDays = [[]];
+  // Preload saved custom plan if one exists, otherwise reset
+  if (state.activePlan && state.activePlan.type === 'custom' && state.activePlan.days) {
+    customDays = state.activePlan.days.map(d => [...d]);
+  } else {
+    customDays = [[]];
+  }
   customExercises = customDays[0];
   currentCustomDay = 0;
-  activeSplitDayCount = 4;
+  activeSplitDayCount = state.activePlan?.type === 'split' ? (state.activePlan.splitN || 4) : 4;
   document.getElementById('custom-workout-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+  updateActivePlanBanner();
+  // Hide assign panels that may have been left open
+  const sap = document.getElementById('split-assign-panel');
+  if (sap) sap.style.display = 'none';
+  const cap = document.getElementById('cw-assign-panel');
+  if (cap) cap.style.display = 'none';
   openCWTab('splits');
-  selectSplitDayCount(4);
+  selectSplitDayCount(activeSplitDayCount);
 }
 
 function closeCustomWorkout() {
@@ -2442,21 +2495,26 @@ function renderSplitCards(n) {
       <button class="split-start-btn" onclick="startSplitDay(${n},${idx})">Start Day ${idx + 1} →</button>`;
     container.appendChild(card);
   });
+  // Show/hide the "Use as Weekly Plan" button
+  const planBtn = document.getElementById('split-use-plan-btn');
+  if (planBtn) planBtn.style.display = '';
 }
 
-function startSplitDay(splitN, dayIdx) {
+// ── Shared phase colour map ──
+const PLAN_PHASE_COLORS = {
+  menstrual:  'linear-gradient(135deg,#F2A7B4,#E8849A)',
+  follicular: 'linear-gradient(135deg,#C9B8E8,#A896D4)',
+  ovulatory:  'linear-gradient(135deg,#F9C9A3,#F0A873)',
+  luteal:     'linear-gradient(135deg,#B8D4C0,#8CBF9C)',
+};
+
+function buildSplitDayWorkout(splitN, dayIdx) {
   const split = WORKOUT_SPLITS[splitN];
-  if (!split) return;
+  if (!split) return null;
   const day = split.days[dayIdx];
-  if (!day) return;
-  const phase = state.phase;
+  if (!day) return null;
+  const phase = state.phase || 'follicular';
   const tier = getMLResult().modifier.tier;
-  const phaseColors = {
-    menstrual:  'linear-gradient(135deg,#F2A7B4,#E8849A)',
-    follicular: 'linear-gradient(135deg,#C9B8E8,#A896D4)',
-    ovulatory:  'linear-gradient(135deg,#F9C9A3,#F0A873)',
-    luteal:     'linear-gradient(135deg,#B8D4C0,#8CBF9C)',
-  };
   const exerciseEntries = day.exercises.map(key => {
     const ex = EXERCISE_DB[key];
     if (!ex) return null;
@@ -2465,10 +2523,10 @@ function startSplitDay(splitN, dayIdx) {
     return { ...ex, key, sets:`${target.sets} × ${repsLabel}`, targetLoad:target.load, isProgression:target.isProgression, progressionLabel:target.label };
   }).filter(Boolean);
   const uniqueMuscles = [...new Set(day.exercises.map(k => (EXERCISE_DB[k] || {}).muscle).filter(Boolean))];
-  currentWorkout = {
-    name: `${split.name} · Day ${dayIdx + 1}`,
+  return {
+    name: `${day.name} · Day ${dayIdx + 1}`,
     emoji: day.emoji, type: split.focus,
-    color: phaseColors[phase] || phaseColors.follicular,
+    color: PLAN_PHASE_COLORS[phase] || PLAN_PHASE_COLORS.follicular,
     exercises: [...day.exercises], exerciseEntries,
     musclesToLog: uniqueMuscles,
     duration: `~${Math.round(day.exercises.length * 4.5)} min`,
@@ -2476,6 +2534,35 @@ function startSplitDay(splitN, dayIdx) {
     kcal: `~${Math.round(day.exercises.length * 35)}`,
     reason: `${split.name} · ${day.name} · adapted to your phase`,
   };
+}
+
+function buildCustomDayWorkout(exerciseKeys, label) {
+  const phase = state.phase || 'follicular';
+  const tier = getMLResult().modifier.tier;
+  const exerciseEntries = exerciseKeys.map(key => {
+    const ex = EXERCISE_DB[key];
+    if (!ex) return null;
+    const target = computeTarget(key, phase, tier);
+    const repsLabel = (ex.muscle === 'core' && ex.name.includes('Plank')) ? `${target.reps} sec` : `${target.reps}`;
+    return { ...ex, key, sets:`${target.sets} × ${repsLabel}`, targetLoad:target.load, isProgression:target.isProgression, progressionLabel:target.label };
+  }).filter(Boolean);
+  const uniqueMuscles = [...new Set(exerciseKeys.map(k => (EXERCISE_DB[k] || {}).muscle).filter(Boolean))];
+  return {
+    name: label || 'Custom Workout', emoji: '💪', type: 'Custom',
+    color: PLAN_PHASE_COLORS[phase] || PLAN_PHASE_COLORS.follicular,
+    exercises: [...exerciseKeys], exerciseEntries,
+    musclesToLog: uniqueMuscles,
+    duration: `~${Math.round(exerciseKeys.length * 4.5)} min`,
+    intensity: tier,
+    kcal: `~${Math.round(exerciseKeys.length * 35)}`,
+    reason: 'Your own plan · adapted to your phase',
+  };
+}
+
+function startSplitDay(splitN, dayIdx) {
+  const workout = buildSplitDayWorkout(splitN, dayIdx);
+  if (!workout) return;
+  currentWorkout = workout;
   closeCustomWorkout();
   startActiveWorkout();
 }
@@ -2486,10 +2573,11 @@ function renderCustomDayTabs() {
   const row = document.getElementById('cw-day-tabs-row');
   const removeBtn = document.getElementById('cw-remove-day-btn');
   row.innerHTML = '';
-  customDays.forEach((_, idx) => {
+  customDays.forEach((day, idx) => {
     const btn = document.createElement('button');
     btn.className = 'cw-day-tab' + (idx === currentCustomDay ? ' active' : '');
-    btn.textContent = `Day ${idx + 1}`;
+    const dot = day.length > 0 ? '<span class="cw-day-dot"></span>' : '';
+    btn.innerHTML = `Day ${idx + 1}${dot}`;
     btn.onclick = () => switchCustomDay(idx);
     row.appendChild(btn);
   });
@@ -2573,9 +2661,13 @@ function renderCWSelected() {
   const list = document.getElementById('cw-selected-list');
   const count = document.getElementById('cw-count');
   const btn = document.getElementById('cw-start-btn');
+  const saveBtn = document.getElementById('cw-save-plan-btn');
   const dayEx = customDays[currentCustomDay] || [];
   if (count) count.textContent = `(${dayEx.length})`;
   if (btn) btn.disabled = dayEx.length === 0;
+  const anyExercises = customDays.some(d => d.length > 0);
+  if (saveBtn) saveBtn.disabled = !anyExercises;
+  renderCustomDayTabs();
 
   if (dayEx.length === 0) {
     list.innerHTML = '<div class="cw-empty">No exercises added yet. Pick from the list below.</div>';
@@ -2602,33 +2694,151 @@ function renderCWSelected() {
 function startCustomWorkout() {
   const dayEx = customDays[currentCustomDay] || [];
   if (dayEx.length === 0) return;
-  const phase = state.phase;
-  const tier = getMLResult().modifier.tier;
-  const phaseColors = {
-    menstrual:  'linear-gradient(135deg,#F2A7B4,#E8849A)',
-    follicular: 'linear-gradient(135deg,#C9B8E8,#A896D4)',
-    ovulatory:  'linear-gradient(135deg,#F9C9A3,#F0A873)',
-    luteal:     'linear-gradient(135deg,#B8D4C0,#8CBF9C)',
-  };
-  const exerciseEntries = dayEx.map(key => {
-    const ex = EXERCISE_DB[key];
-    if (!ex) return null;
-    const target = computeTarget(key, phase, tier);
-    const repsLabel = (ex.muscle === 'core' && ex.name.includes('Plank')) ? `${target.reps} sec` : `${target.reps}`;
-    return { ...ex, key, sets:`${target.sets} × ${repsLabel}`, targetLoad:target.load, isProgression:target.isProgression, progressionLabel:target.label };
-  }).filter(Boolean);
-  const uniqueMuscles = [...new Set(dayEx.map(k => (EXERCISE_DB[k] || {}).muscle).filter(Boolean))];
-  const dayLabel = customDays.length > 1 ? ` · Day ${currentCustomDay + 1}` : '';
-  currentWorkout = {
-    name: `Custom Workout${dayLabel}`, emoji: '💪', type: 'Custom',
-    color: phaseColors[phase] || phaseColors.follicular,
-    exercises: [...dayEx], exerciseEntries,
-    musclesToLog: uniqueMuscles,
-    duration: '— min', intensity: '—', kcal: '~0',
-    reason: 'Your own plan · adapted to your phase',
-  };
+  const dayLabel = customDays.length > 1 ? `Custom · Day ${currentCustomDay + 1}` : 'Custom Workout';
+  currentWorkout = buildCustomDayWorkout(dayEx, dayLabel);
   closeCustomWorkout();
   startActiveWorkout();
+}
+
+// ── Plan assignment UI (shared by splits + custom) ──
+
+let _assignTarget = null; // { type:'split'|'custom', splitN, days } pending confirmation
+let _pendingAssignments = {}; // weekdayIdx → splitDayIdx
+
+function openSplitAssign() {
+  _assignTarget = { type: 'split', splitN: activeSplitDayCount, days: WORKOUT_SPLITS[activeSplitDayCount].days };
+  _pendingAssignments = {};
+  // Pre-populate from existing plan if same split
+  if (state.activePlan && state.activePlan.type === 'split' && state.activePlan.splitN === activeSplitDayCount) {
+    _pendingAssignments = { ...state.activePlan.dayAssignments };
+  }
+  renderAssignPanel();
+  document.getElementById('split-cards-container').style.display = 'none';
+  document.getElementById('split-use-plan-btn').style.display = 'none';
+  document.getElementById('split-assign-panel').style.display = 'flex';
+}
+
+function openCustomAssign() {
+  const hasExercises = customDays.some(d => d.length > 0);
+  if (!hasExercises) { showToast('Add exercises to at least one day first'); return; }
+  _assignTarget = { type: 'custom', splitN: null, days: customDays.map((d, i) => ({ name: `Day ${i + 1}`, emoji: '💪', exercises: d })) };
+  _pendingAssignments = {};
+  if (state.activePlan && state.activePlan.type === 'custom') {
+    _pendingAssignments = { ...state.activePlan.dayAssignments };
+  }
+  renderAssignPanel();
+  document.getElementById('cw-panel-custom').style.display = 'none';
+  document.getElementById('cw-assign-panel').style.display = 'flex';
+}
+
+function renderAssignPanel() {
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const days = _assignTarget.days;
+
+  const isSplit = _assignTarget.type === 'split';
+  const panelId = isSplit ? 'split-assign-rows' : 'cw-assign-rows';
+  const container = document.getElementById(panelId);
+  if (!container) return;
+
+  container.innerHTML = '';
+  dayNames.forEach((label, i) => {
+    const row = document.createElement('div');
+    row.className = 'split-assign-day-row';
+    const assigned = _pendingAssignments[i];
+    const pillsHtml = days.map((d, di) => {
+      const isActive = assigned === di;
+      const shortName = d.name.length > 10 ? d.name.slice(0, 9) + '…' : d.name;
+      return `<button class="split-assign-day-btn${isActive ? ' active' : ''}" onclick="toggleAssignment(${i},${di})">${d.emoji} ${shortName}</button>`;
+    }).join('');
+    row.innerHTML = `<span class="split-assign-day-label">${label}</span><div class="split-assign-day-btns">${pillsHtml}</div>`;
+    container.appendChild(row);
+  });
+}
+
+function toggleAssignment(weekdayIdx, splitDayIdx) {
+  if (_pendingAssignments[weekdayIdx] === splitDayIdx) {
+    delete _pendingAssignments[weekdayIdx];
+  } else {
+    _pendingAssignments[weekdayIdx] = splitDayIdx;
+  }
+  renderAssignPanel();
+}
+
+function _syncWeekScheduleFromAssignments(assignments) {
+  const schedule = [false,false,false,false,false,false,false];
+  Object.keys(assignments).forEach(k => { schedule[parseInt(k)] = true; });
+  state.weekSchedule = schedule;
+  state.weekScheduleWeek = getWeekMonday();
+}
+
+function confirmSplitPlan() {
+  state.activePlan = {
+    type: 'split',
+    splitN: _assignTarget.splitN,
+    days: _assignTarget.days,
+    dayAssignments: { ..._pendingAssignments },
+  };
+  _syncWeekScheduleFromAssignments(_pendingAssignments);
+  saveState();
+  invalidateML();
+  closeCustomWorkout();
+  renderToday();
+  showToast('✨ Split plan saved!');
+}
+
+function confirmCustomPlan() {
+  state.activePlan = {
+    type: 'custom',
+    splitN: null,
+    days: customDays.map(d => [...d]),
+    dayAssignments: { ..._pendingAssignments },
+  };
+  _syncWeekScheduleFromAssignments(_pendingAssignments);
+  saveState();
+  invalidateML();
+  closeCustomWorkout();
+  renderToday();
+  showToast('✨ Custom plan saved!');
+}
+
+function clearActivePlan() {
+  state.activePlan = null;
+  saveState();
+  invalidateML();
+  renderToday();
+  updateActivePlanBanner();
+  showToast('Plan cleared');
+}
+
+function updateActivePlanBanner() {
+  const bar = document.getElementById('cw-active-plan-bar');
+  if (!bar) return;
+  if (!state.activePlan) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  const p = state.activePlan;
+  let label;
+  if (p.type === 'split') {
+    const split = WORKOUT_SPLITS[p.splitN];
+    label = split ? `${split.emoji} ${split.name} active` : 'Split plan active';
+  } else {
+    const dayCount = p.days ? p.days.length : 0;
+    label = `💪 Custom plan · ${dayCount} day${dayCount !== 1 ? 's' : ''}`;
+  }
+  document.getElementById('cw-active-plan-label').textContent = label;
+}
+
+function closeSplitAssign() {
+  document.getElementById('split-assign-panel').style.display = 'none';
+  document.getElementById('split-cards-container').style.display = '';
+  document.getElementById('split-use-plan-btn').style.display = '';
+}
+
+function closeCustomAssign() {
+  document.getElementById('cw-assign-panel').style.display = 'none';
+  document.getElementById('cw-panel-custom').style.display = 'flex';
 }
 
 // ═══════════════════════════════════════════

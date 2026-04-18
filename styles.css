@@ -648,11 +648,11 @@ position: relative; overflow: hidden;
 .cw-filter-row::-webkit-scrollbar { display: none; }
 
 /* Day action buttons */
-.cw-day-actions { display: flex; gap: 8px; margin-bottom: 10px; }
-.cw-day-action-btn { flex: 1; padding: 10px; border-radius: 12px; border: 1.5px dashed rgba(202,168,186,.5); background: transparent; font-size: 13px; font-weight: 700; color: var(--rose); cursor: pointer; transition: all .2s; font-family: ‘Nunito’, sans-serif; }
+.cw-day-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.cw-day-action-btn { flex: 1; padding: 8px 10px; border-radius: 12px; border: 1.5px dashed rgba(202,168,186,.5); background: transparent; font-size: 13px; font-weight: 700; color: var(--rose); cursor: pointer; transition: all .2s; font-family: ‘Nunito’, sans-serif; }
 .cw-day-action-btn:active { background: rgba(242,167,180,.1); }
 
-.cw-footer { padding: 12px 20px 24px; flex-shrink: 0; }
+.cw-footer { padding: 10px 20px 24px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0; }
 
 /* ═══════════════════════════════════════════
 PROGRESS SCREEN.
@@ -1429,3 +1429,128 @@ PHASE ENERGY CARD
 .ppb-sub { font-size: 10px; color: var(--mid); line-height: 1.3; }
 .pet-pick-btn.selected { border-color: var(--rose-d); background: #FDE8EE; }
 .pet-pick-btn:active { transform: scale(.97); }
+
+/* ═══════════════════════════════════════════
+TRAINING PLAN BUILDER — NEW STYLES
+═══════════════════════════════════════════ */
+
+/* Active plan banner */
+.cw-active-plan-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 20px; background: rgba(168,150,212,.15);
+  border-bottom: 1px solid rgba(168,150,212,.25); flex-shrink: 0;
+  font-size: 12px; font-weight: 700; color: var(--lilac-d);
+}
+.cw-clear-plan-btn {
+  border: none; background: transparent; font-size: 11px; font-weight: 700;
+  color: var(--rose-d); cursor: pointer; padding: 4px 8px;
+  border-radius: 100px; font-family: 'Nunito', sans-serif;
+}
+.cw-clear-plan-btn:active { background: rgba(242,167,180,.15); }
+
+/* "Use as Weekly Plan" button in splits panel */
+.split-use-plan-btn {
+  width: calc(100% - 0px); margin: 12px 0 4px;
+  padding: 14px; border: none; border-radius: 14px;
+  background: linear-gradient(135deg, var(--lilac-d), var(--rose));
+  color: white; font-size: 15px; font-weight: 800; cursor: pointer;
+  transition: opacity .2s; font-family: 'Nunito', sans-serif;
+  letter-spacing: .2px;
+}
+.split-use-plan-btn:active { opacity: .85; }
+
+/* Day assignment panel — full overlay within CW overlay */
+.split-assign-panel {
+  position: absolute; inset: 0; z-index: 10;
+  background: var(--cream); flex-direction: column;
+  overflow-y: auto;
+}
+
+.assign-panel-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 20px 12px;
+  background: linear-gradient(135deg, var(--lilac), var(--rose));
+}
+.assign-back-btn {
+  border: none; background: rgba(255,255,255,.2); color: white;
+  font-size: 13px; font-weight: 700; padding: 8px 14px;
+  border-radius: 100px; cursor: pointer; font-family: 'Nunito', sans-serif;
+  flex-shrink: 0;
+}
+.assign-back-btn:active { background: rgba(255,255,255,.35); }
+.assign-panel-title {
+  font-family: 'Playfair Display', serif; font-size: 20px;
+  color: white; font-weight: 600;
+}
+.assign-panel-hint {
+  font-size: 12px; color: var(--mid); padding: 10px 20px 4px;
+  font-weight: 600;
+}
+
+.split-assign-rows { display: flex; flex-direction: column; padding: 8px 20px; gap: 6px; }
+
+.split-assign-day-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; background: white; border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(46,31,42,.05);
+}
+.split-assign-day-row.rest-day { opacity: .45; }
+
+.split-assign-day-label {
+  min-width: 36px; font-size: 12px; font-weight: 800;
+  color: var(--ink); padding-top: 6px; flex-shrink: 0;
+}
+.split-assign-day-btns {
+  display: flex; flex-wrap: wrap; gap: 6px; flex: 1;
+}
+.split-assign-day-btn {
+  padding: 6px 12px; border-radius: 100px;
+  border: 1.5px solid rgba(202,168,186,.4); background: white;
+  font-size: 12px; font-weight: 700; color: var(--mid);
+  cursor: pointer; transition: all .15s; font-family: 'Nunito', sans-serif;
+}
+.split-assign-day-btn.active {
+  background: linear-gradient(135deg, var(--lilac), var(--rose));
+  border-color: transparent; color: white;
+}
+.split-assign-day-btn:active { transform: scale(.96); }
+.assign-rest-label { font-size: 12px; color: var(--light); padding-top: 6px; }
+
+.split-assign-confirm-btn {
+  margin: 16px 20px 32px; width: calc(100% - 40px);
+}
+
+/* Footer: two-button row */
+.cw-footer { padding: 10px 20px 24px; flex-shrink: 0; }
+.cw-footer-btns {
+  display: flex; gap: 10px; align-items: center;
+}
+.cw-footer-btns .btn-primary { flex: 1; }
+.cw-footer-btns .btn-secondary { flex: 1; }
+
+/* Secondary button */
+.btn-secondary {
+  width: 100%; padding: 16px; border-radius: 12px;
+  border: 2px solid var(--rose); background: transparent;
+  color: var(--rose-d); font-size: 15px; font-weight: 800;
+  cursor: pointer; transition: all .2s; font-family: 'Nunito', sans-serif;
+  letter-spacing: .3px;
+}
+.btn-secondary:disabled { opacity: .4; cursor: default; }
+.btn-secondary:not(:disabled):active { background: rgba(242,167,180,.12); transform: scale(.97); }
+
+/* Day tab dot indicator */
+.cw-day-tab { position: relative; }
+.cw-day-dot {
+  display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--rose-d);
+  margin-left: 5px; vertical-align: middle;
+  position: relative; top: -1px;
+}
+.cw-day-tab.active .cw-day-dot { background: rgba(255,255,255,.85); }
+
+/* Fix exercise list to be scrollable within the panel */
+.cw-exercise-list { max-height: 36vh; overflow-y: auto; }
+
+/* Relative positioning for cw-panel so assign panel can overlay it */
+.cw-panel { position: relative; }
