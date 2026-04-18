@@ -38,6 +38,15 @@ const state = {
   // ── VIRTUAL PET ──
   pet: null,       // { type, health, lastFedDate, totalFeeds } or null
 
+  // ── ADAPTIVE PHASE VOLUME SENSITIVITY ──
+  // Starts at population defaults; updated after each workout via RPE + completion signals.
+  phaseVolumeSensitivity: {
+    menstrual:  { learnedScale: 0.70, samples: 0 },
+    follicular: { learnedScale: 1.00, samples: 0 },
+    ovulatory:  { learnedScale: 1.10, samples: 0 },
+    luteal:     { learnedScale: 0.80, samples: 0 },
+  },
+
   // ── PERSONAL CYCLE MODEL ──
   // Seeded from onboarding, refined by "period started" events + symptom inference
   cycle: {
@@ -464,7 +473,11 @@ function generatePlan(phase, tier) {
   const tierOrder = { heavy: 0, moderate: 1, light: 2 };
   exKeys.sort((a, b) => (tierOrder[EXERCISE_DB[a]?.tier] ?? 1) - (tierOrder[EXERCISE_DB[b]?.tier] ?? 1));
 
-  const phaseScale = (PHASES[phase] && PHASES[phase].volumeScale) || 1.0;
+  // Use the user's learned phase sensitivity when available; fall back to population default
+  const pvs = state.phaseVolumeSensitivity;
+  const phaseScale = (pvs?.[phase]?.samples > 0)
+    ? pvs[phase].learnedScale
+    : ((PHASES[phase] && PHASES[phase].volumeScale) || 1.0);
 
   // Apply user's chosen session duration scale (from onboarding)
   const durationScale = (state.durationScale || 1.0) * phaseScale;
@@ -842,17 +855,71 @@ function scoreReadiness(f) {
 // Model 3: Adaptive Modifier (Contextual Bandit proxy)
 // Maps readiness + phase → action (volume tier, intensity, session type)
 function adaptModifier(readiness, f) {
-  // Hard safety rules (override bandit)
+  // Hard safety rules (override bandit) — use raw score, never adjusted
   if (f.hasCramps || readiness.score < 20)     return { tier: 'low',    volumeMod: -30, intensityLabel: 'Low',      action: 'SAFETY_OVERRIDE' };
   if (f.acwr > 1.5)                             return { tier: 'low',    volumeMod: -25, intensityLabel: 'Low',      action: 'DELOAD_ACWR' };
   if (f.skipRate > 0.55)                        return { tier: 'low',    volumeMod: -20, intensityLabel: 'Low–Med',  action: 'SKIP_PATTERN' };
 
-  // Bandit policy table
-  if (readiness.score >= 80 && f.phase === 'ovulatory') return { tier: 'high',   volumeMod: +20, intensityLabel: 'Maximal',   action: 'PR_WINDOW' };
-  if (readiness.score >= 70 && f.phase === 'follicular') return { tier: 'high',  volumeMod: +10, intensityLabel: 'High',      action: 'PROGRESSIVE_OVERLOAD' };
-  if (readiness.score >= 65)                             return { tier: 'medium', volumeMod:   0, intensityLabel: 'Medium',    action: 'MAINTAIN' };
-  if (readiness.score >= 40)                             return { tier: 'medium', volumeMod: -10, intensityLabel: 'Med–Low',   action: 'SLIGHT_REDUCE' };
-  return                                                        { tier: 'low',    volumeMod: -25, intensityLabel: 'Low',       action: 'RECOVERY' };
+  // Phase tolerance bonus: shift thresholds based on this user's learned response to the phase.
+  // After ≥2 samples, if they handle it better than the population default → raise adjScore;
+  // if they're more sensitive → lower it.
+  const pvs = state.phaseVolumeSensitivity;
+  let phaseToleranceBonus = 0;
+  if (pvs?.[f.phase]?.samples >= 2) {
+    const ratio = pvs[f.phase].learnedScale / (PHASES[f.phase]?.volumeScale || 1.0);
+    phaseToleranceBonus = Math.max(-15, Math.min(15, Math.round((ratio - 1) * 25)));
+  }
+  const adjScore = readiness.score + phaseToleranceBonus;
+
+  // Bandit policy table (uses adjScore so individual tolerance shifts the tier boundaries)
+  if (adjScore >= 80 && f.phase === 'ovulatory') return { tier: 'high',   volumeMod: +20, intensityLabel: 'Maximal',   action: 'PR_WINDOW' };
+  if (adjScore >= 70 && f.phase === 'follicular') return { tier: 'high',  volumeMod: +10, intensityLabel: 'High',      action: 'PROGRESSIVE_OVERLOAD' };
+  if (adjScore >= 65)                             return { tier: 'medium', volumeMod:   0, intensityLabel: 'Medium',    action: 'MAINTAIN' };
+  if (adjScore >= 40)                             return { tier: 'medium', volumeMod: -10, intensityLabel: 'Med–Low',   action: 'SLIGHT_REDUCE' };
+  return                                                 { tier: 'low',    volumeMod: -25, intensityLabel: 'Low',       action: 'RECOVERY' };
+}
+
+// Updates the per-user, per-phase learned volume scale after each completed workout.
+// Uses RPE vs phase target and set completion rate as the learning signal.
+function updatePhaseVolumeSensitivity(phase, rpes, completedSets, totalSets) {
+  if (!state.phaseVolumeSensitivity) {
+    state.phaseVolumeSensitivity = {
+      menstrual:  { learnedScale: 0.70, samples: 0 },
+      follicular: { learnedScale: 1.00, samples: 0 },
+      ovulatory:  { learnedScale: 1.10, samples: 0 },
+      luteal:     { learnedScale: 0.80, samples: 0 },
+    };
+  }
+  const phaseDef = state.phaseVolumeSensitivity[phase];
+  if (!phaseDef) return;
+
+  const validRPEs = (rpes || []).filter(r => r > 0);
+  if (validRPEs.length === 0) return;
+
+  const avgRPE = validRPEs.reduce((a, b) => a + b, 0) / validRPEs.length;
+  const completionRate = totalSets > 0 ? Math.min(1, completedSets / totalSets) : 1;
+
+  // Phase-appropriate RPE targets: how hard a well-calibrated session should feel
+  const targetRPE = { menstrual: 6.0, follicular: 7.5, ovulatory: 8.0, luteal: 6.5 }[phase] || 7.0;
+
+  // Positive signal = felt easier than target (can handle more); negative = too hard
+  const rpeSignal        = (targetRPE - avgRPE) / 10;
+  // Positive signal = completed most sets (volume was manageable); negative = couldn't finish
+  const completionSignal = (completionRate - 0.85) * 0.5;
+
+  const adjustment = rpeSignal * 0.7 + completionSignal * 0.3;
+
+  // Learning rate decays with samples — starts fast, stabilises as evidence accumulates
+  const lr = Math.max(0.05, 0.25 / (1 + phaseDef.samples * 0.2));
+
+  const defaultScale = PHASES[phase]?.volumeScale || 1.0;
+  const minScale = Math.max(0.40, defaultScale * 0.5);
+  const maxScale = Math.min(1.50, defaultScale * 1.6);
+
+  phaseDef.learnedScale = Math.max(minScale, Math.min(maxScale,
+    Math.round((phaseDef.learnedScale + lr * adjustment) * 100) / 100
+  ));
+  phaseDef.samples++;
 }
 
 // Explainability: map top SHAP features + action → human copy
@@ -2350,6 +2417,14 @@ function finishWorkout() {
   });
   // Log muscles trained for rotation tracking
   if (currentWorkout.musclesToLog) logMusclesTrained(currentWorkout.musclesToLog);
+
+  // Learn this user's response to the current phase: update learnedScale from RPE + completion
+  const completedSetCount = Object.values(perExerciseSets)
+    .reduce((n, sets) => n + sets.filter(s => s.done).length, 0);
+  const totalSetCount = Object.values(perExerciseSets)
+    .reduce((n, sets) => n + sets.length, 0);
+  updatePhaseVolumeSensitivity(state.phase, sessionRPEs, completedSetCount, totalSetCount);
+
   // Invalidate so next plan regenerates with fresh history
   invalidateML();
 
@@ -3409,6 +3484,15 @@ function loadStateLocal() {
     if (saved) {
       const parsed = JSON.parse(saved);
       Object.assign(state, parsed);
+      // Migration: ensure phaseVolumeSensitivity exists for users saved before this feature
+      if (!state.phaseVolumeSensitivity) {
+        state.phaseVolumeSensitivity = {
+          menstrual:  { learnedScale: 0.70, samples: 0 },
+          follicular: { learnedScale: 1.00, samples: 0 },
+          ovulatory:  { learnedScale: 1.10, samples: 0 },
+          luteal:     { learnedScale: 0.80, samples: 0 },
+        };
+      }
       return true;
     }
   } catch(e){}
