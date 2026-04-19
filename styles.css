@@ -22,11 +22,53 @@
 --phase-bg: #FDE8EE;
 }
 
+/* ── DARK MODE VARIABLES ── */
+[data-theme="dark"] {
+  --cream:   #1A1320;
+  --warm:    #1A1320;
+  --mist:    #2A1F35;
+  --ink:     #F0E8EC;
+  --mid:     #C4ACBA;
+  --light:   #7A6070;
+  --white:   #1A1320;
+  --card-bg: #251A30;
+}
+[data-theme="dark"] body,
+[data-theme="dark"] #app-shell,
+[data-theme="dark"] .screen,
+[data-theme="dark"] #screen-today { background: #1A1320; }
+[data-theme="dark"] .chart-card,
+[data-theme="dark"] .set-tracker,
+[data-theme="dark"] .aw-timer-card,
+[data-theme="dark"] .rpe-slider,
+[data-theme="dark"] .shap-card,
+[data-theme="dark"] .pipeline-card,
+[data-theme="dark"] .signal-item,
+[data-theme="dark"] .override-card,
+[data-theme="dark"] .split-day-card,
+[data-theme="dark"] .cw-ex-item,
+[data-theme="dark"] .cw-selected-item,
+[data-theme="dark"] .ac-row,
+[data-theme="dark"] .account-card { background: #251A30 !important; color: var(--ink); }
+[data-theme="dark"] .auth-input,
+[data-theme="dark"] .auth-google-btn { background: #251A30 !important; color: var(--ink); border-color: rgba(255,255,255,.12); }
+[data-theme="dark"] .set-weight-input,
+[data-theme="dark"] .set-reps-input { background: #1A1320 !important; color: var(--ink); border-color: rgba(255,255,255,.15); }
+[data-theme="dark"] .set-weight-input:focus,
+[data-theme="dark"] .set-reps-input:focus { background: #251A30 !important; }
+[data-theme="dark"] .wc-body { background: #251A30 !important; }
+[data-theme="dark"] .split-day-btn,
+[data-theme="dark"] .cw-day-tab { background: #251A30 !important; color: var(--mid); }
+[data-theme="dark"] #bottom-nav { background: rgba(26,19,32,.92) !important; border-top-color: rgba(255,255,255,.08) !important; }
+[data-theme="dark"] .account-sheet { background: rgba(0,0,0,.5); }
+[data-theme="dark"] .rest-ctrl-btn.skip { background: #251A30 !important; color: var(--ink); }
+[data-theme="dark"] input[type=range]::-webkit-slider-thumb { background: #251A30 !important; }
+
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
 body {
 font-family: ‘Nunito’, -apple-system, BlinkMacSystemFont, ‘Segoe UI’, sans-serif;
-background: #FFFFFF;
+background: var(--cream);
 color: var(--ink);
 min-height: 100vh;
 display: flex;
@@ -43,7 +85,7 @@ width: 100%;
 max-width: 480px;
 height: 100dvh;
 min-height: -webkit-fill-available;
-background: #FFFFFF;
+background: var(--cream);
 border-radius: 0;
 box-shadow: none;
 overflow: visible;
@@ -298,7 +340,7 @@ input[type=range]::-webkit-slider-thumb { appearance: none; width: 22px; height:
 /* ═══════════════════════════════════════════
 TODAY SCREEN
 ═══════════════════════════════════════════ */
-#screen-today { background: #FFFFFF; }
+#screen-today { background: var(--cream); }
 
 .today-hero {
 padding: 20px 24px 0;
@@ -1554,3 +1596,28 @@ TRAINING PLAN BUILDER — NEW STYLES
 
 /* Relative positioning for cw-panel so assign panel can overlay it */
 .cw-panel { position: relative; }
+
+/* ── 7-DAY FORECAST STRIP ── */
+.forecast-strip {
+  display: flex; gap: 6px; padding: 14px 20px 6px;
+  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.forecast-strip::-webkit-scrollbar { display: none; }
+.fc-day {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding: 8px 11px; border-radius: 12px; min-width: 48px;
+}
+.fc-icon { font-size: 15px; }
+.fc-label { font-size: 10px; font-weight: 700; color: var(--mid); white-space: nowrap; }
+
+/* ── FLOW INTENSITY SELECTOR ── */
+#flow-intensity-row { padding: 12px 0 4px; animation: fadeUp .3s ease; }
+.flow-label { font-size: 13px; font-weight: 700; color: var(--mid); margin-bottom: 10px; }
+.flow-btns { display: flex; gap: 8px; }
+.flow-btn {
+  flex: 1; padding: 9px 4px; border-radius: 12px; border: 1.5px solid var(--rose);
+  background: transparent; color: var(--ink); font-size: 12px; font-weight: 700;
+  font-family: inherit; cursor: pointer; transition: all .2s;
+}
+.flow-btn:active { transform: scale(.96); }
+.flow-btn.active { background: var(--rose); color: var(--white); border-color: var(--rose); }

@@ -7,6 +7,23 @@ const DEFAULT_PHASE_LENGTHS = Object.freeze({ menstrual: 5, follicular: 8, ovula
 /** Round a load value to the nearest 1.25 kg plate increment. */
 function roundToPlate(load) { return Math.round(load / 1.25) * 1.25; }
 
+function haptic(pattern) { if (navigator.vibrate) navigator.vibrate(pattern); }
+
+function applyTheme() {
+  const dark = localStorage.getItem('bloom_dark') === '1';
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  const icon = document.getElementById('dark-mode-icon');
+  const sub  = document.getElementById('dark-mode-sub');
+  if (icon) icon.textContent = dark ? '☀️' : '🌙';
+  if (sub)  sub.textContent  = dark ? 'On'  : 'Off';
+}
+
+function toggleDarkMode() {
+  const next = localStorage.getItem('bloom_dark') !== '1';
+  localStorage.setItem('bloom_dark', next ? '1' : '0');
+  applyTheme();
+}
+
 // ═══════════════════════════════════════════
 // APP STATE
 // ═══════════════════════════════════════════
@@ -1036,6 +1053,7 @@ function evaluateBadges() {
     if (!state.badges.includes(key) && BADGES[key].check()) {
       state.badges.push(key);
       _badgeQueue.push(key);
+      haptic([80, 40, 80, 40, 200]);
     }
   });
   saveState();
@@ -1702,6 +1720,9 @@ function renderToday() {
   document.getElementById('phase-desc').textContent = phase.desc;
   document.getElementById('phase-chips').innerHTML = phase.chips.map(c => `<span class="phase-chip">${c}</span>`).join('');
 
+  // 7-day forecast
+  renderForecastStrip();
+
   // Phase energy card
   renderPhaseEnergyCard();
 
@@ -1763,6 +1784,38 @@ function renderToday() {
     `<span style="font-size:10px;padding:3px 9px;border-radius:100px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)">Score: ${score}/100</span>`,
     `<span style="font-size:10px;padding:3px 9px;border-radius:100px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)">Vol: ${modifier.volumeMod >= 0 ? '+' : ''}${modifier.volumeMod}%</span>`,
   ].join('');
+}
+
+// ─────────────────────────────────────────
+// 7-DAY PHASE FORECAST STRIP
+// ─────────────────────────────────────────
+function renderForecastStrip() {
+  const strip = document.getElementById('forecast-strip');
+  if (!strip) return;
+  const pl = state.cycle.phaseLengths;
+  const cycleLen = state.cycle.cycleLength || 28;
+  const phaseOrder = ['menstrual', 'follicular', 'ovulatory', 'luteal'];
+  const days = [];
+  for (let d = 1; d <= 7; d++) {
+    const dayNum = ((state.cycleDay - 1 + d) % cycleLen) + 1;
+    let acc = 0;
+    let phase = 'luteal';
+    for (const p of phaseOrder) {
+      acc += pl[p];
+      if (dayNum <= acc) { phase = p; break; }
+    }
+    const date = new Date();
+    date.setDate(date.getDate() + d);
+    const label = d === 1 ? 'Tmrw' : date.toLocaleDateString('en', { weekday: 'short' });
+    days.push({ label, phase });
+  }
+  strip.innerHTML = days.map(({ label, phase }) => {
+    const p = PHASES[phase];
+    return `<div class="fc-day" style="background:${p.bg}">
+      <span class="fc-icon">${p.icon}</span>
+      <span class="fc-label">${label}</span>
+    </div>`;
+  }).join('');
 }
 
 // ─────────────────────────────────────────
@@ -1935,12 +1988,22 @@ function onPeriodStarted() {
   btn.querySelector('.psb-sub').textContent = 'Bloom will update your cycle model';
   // Mark for processing on submit
   state._periodStartedToday = true;
+  // Show flow intensity selector
+  const flowRow = document.getElementById('flow-intensity-row');
+  if (flowRow) flowRow.style.display = 'block';
   // Pre-select cramps chip as likely
   const crampsChip = document.querySelector('[onclick*="cramps"]');
   if (crampsChip && !state.symptoms.includes('cramps')) {
     crampsChip.classList.add('selected');
     state.symptoms.push('cramps');
   }
+}
+
+function setFlow(intensity) {
+  state._periodFlow = intensity;
+  document.querySelectorAll('.flow-btn').forEach(b => b.classList.remove('active'));
+  const active = document.querySelector(`.flow-btn[onclick*="${intensity}"]`);
+  if (active) active.classList.add('active');
 }
 
 // Apple Health / Health Connect
@@ -1966,6 +2029,14 @@ function submitCheckin() {
   if (state._periodStartedToday) {
     recordPeriodStart();
     state._periodStartedToday = false;
+    // Save flow intensity if captured
+    if (state._periodFlow) {
+      if (!state.cycle.flowHistory) state.cycle.flowHistory = [];
+      state.cycle.flowHistory.push({ date: new Date().toISOString().slice(0, 10), intensity: state._periodFlow });
+      state._periodFlow = null;
+    }
+    const flowRow = document.getElementById('flow-intensity-row');
+    if (flowRow) { flowRow.style.display = 'none'; document.querySelectorAll('.flow-btn').forEach(b => b.classList.remove('active')); }
   } else {
     // Just advance day and re-blend phase from symptoms
     advanceCycleDay();
@@ -2262,6 +2333,7 @@ function markSetDone(idx) {
   const row = document.getElementById(`set-row-${idx}`);
   if (row) row.classList.toggle('done', setData[idx].done);
   if (setData[idx].done) {
+    haptic(40);
     showRestOverlay(idx);
   }
 }
@@ -2315,6 +2387,7 @@ function showRestOverlay(completedSetIdx) {
     updateRestDisplay();
     if (restCountdown <= 0) {
       clearInterval(restTimerInterval);
+      haptic([200, 100, 200]);
       document.getElementById('rest-timer-display').textContent = 'Go!';
       document.getElementById('rest-timer-label').textContent = 'Time to lift ✨';
       document.getElementById('rest-timer-label').style.color = 'var(--rose)';
@@ -3338,6 +3411,7 @@ function updateAccountUI(user) {
 
 function openAccount()  {
   updateSyncUI();
+  applyTheme(); // keep dark-mode icon/label in sync
   document.getElementById('account-sheet').classList.add('open');
 }
 function closeAccount(e) {
@@ -3971,6 +4045,7 @@ function closeLightbox(e) {
 // ═══════════════════════════════════════════
 function init() {
   // Status bar removed for premium web layout
+  applyTheme();
 
   if (!state.cycle) state.cycle = getDefaultCycle();
 
@@ -4003,3 +4078,30 @@ function init() {
 }
 
 init();
+
+// ═══════════════════════════════════════════
+// SWIPE GESTURE NAVIGATION
+// ═══════════════════════════════════════════
+const NAV_ORDER = ['today', 'checkin', 'workout', 'progress', 'ml'];
+
+(function initSwipeNav() {
+  const el = document.getElementById('screen-container');
+  if (!el) return;
+  let startX = 0, startY = 0;
+  el.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const active = document.querySelector('.screen.active');
+    if (!active) return;
+    const cur = active.id.replace('screen-', '');
+    const idx = NAV_ORDER.indexOf(cur);
+    if (idx === -1) return;
+    if (dx < 0 && idx < NAV_ORDER.length - 1) goTo(NAV_ORDER[idx + 1], 'right');
+    if (dx > 0 && idx > 0) goTo(NAV_ORDER[idx - 1], 'left');
+  }, { passive: true });
+})();

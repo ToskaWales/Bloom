@@ -353,6 +353,8 @@
     </div>
   </div>
 
+  <div class="forecast-strip" id="forecast-strip"></div>
+
   <div class="phase-banner" id="phase-banner">
     <div class="phase-banner-glow" id="phase-glow"></div>
     <div class="phase-label" id="phase-label-sm">Phase 1</div>
@@ -489,6 +491,14 @@
       </div>
       <span class="psb-arrow">→</span>
     </button>
+    <div id="flow-intensity-row" style="display:none">
+      <p class="flow-label">How heavy is your flow?</p>
+      <div class="flow-btns">
+        <button class="flow-btn" onclick="setFlow('light')">🩸 Light</button>
+        <button class="flow-btn" onclick="setFlow('medium')">🩸🩸 Medium</button>
+        <button class="flow-btn" onclick="setFlow('heavy')">🩸🩸🩸 Heavy</button>
+      </div>
+    </div>
   </div>
 
   <div class="ci-section">
@@ -1249,6 +1259,11 @@
 <button class="ac-row" onclick="exportData()">
   <span class="ac-row-icon">📥</span>
   <div class="ac-row-text">Export my data<span class="ac-row-sub">Download all your training & cycle data</span></div>
+  <span style="color:var(--light)">→</span>
+</button>
+<button class="ac-row" onclick="toggleDarkMode()">
+  <span class="ac-row-icon" id="dark-mode-icon">🌙</span>
+  <div class="ac-row-text">Dark mode<span class="ac-row-sub" id="dark-mode-sub">Off</span></div>
   <span style="color:var(--light)">→</span>
 </button>
 <button class="ac-row" onclick="resetOnboarding()">
